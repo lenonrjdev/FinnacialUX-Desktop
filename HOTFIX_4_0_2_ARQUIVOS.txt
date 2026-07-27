@@ -1,0 +1,7 @@
+.gitignore
+HOTFIX_4_0_2_DOWNLOAD_LIBSODIUM.md
+HOTFIX_4_0_2_ARQUIVOS.txt
+scripts/01_CONFIGURAR_DESKTOP.ps1
+scripts/02_RODAR_DESKTOP.ps1
+scripts/03_GERAR_INSTALADOR.ps1
+scripts/libsodium-cache.ps1

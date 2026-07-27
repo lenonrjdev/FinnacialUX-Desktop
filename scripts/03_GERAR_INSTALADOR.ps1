@@ -2,9 +2,13 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+. (Join-Path $PSScriptRoot "libsodium-cache.ps1")
+
 if (-not (Test-Path ".\node_modules")) {
   throw "Dependências não instaladas. Execute primeiro .\01_CONFIGURAR_DESKTOP.cmd"
 }
+
+Initialize-LibsodiumCache -Root $Root
 
 Write-Host "Gerando o instalador NSIS do FinnacialUX Desktop..." -ForegroundColor Cyan
 npm run desktop:build

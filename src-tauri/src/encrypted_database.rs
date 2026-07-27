@@ -7,7 +7,7 @@ use serde_json::{Map, Number, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteRow, SqliteSynchronous},
-    Column, Connection, Executor, Row, SqliteConnection, TypeInfo, ValueRef,
+    Column, Connection, ConnectOptions, Row, SqliteConnection, TypeInfo, ValueRef,
 };
 use std::{
     fs,

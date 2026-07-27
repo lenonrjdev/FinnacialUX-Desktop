@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Permissões mínimas da janela principal do FinnacialUX Desktop.","local":true,"windows":["main"],"permissions":["core:default","sql:default","sql:allow-execute","sql:allow-close","dialog:default","log:default"]}}
+{"default":{"identifier":"default","description":"Permissões mínimas da janela principal do FinnacialUX Desktop.","local":true,"windows":["main"],"permissions":["core:default","dialog:default","log:default","stronghold:default"]}}

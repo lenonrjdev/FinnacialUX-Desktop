@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+. (Join-Path $PSScriptRoot "libsodium-cache.ps1")
+
 if (-not (Test-Path ".\node_modules")) {
   throw "Dependências não instaladas. Execute primeiro .\01_CONFIGURAR_DESKTOP.cmd"
 }
@@ -17,6 +19,8 @@ $PortInUse = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction Sil
 if ($PortInUse) {
   throw "A porta 3000 já está em uso. Encerre a execução anterior do FinnacialUX Desktop antes de iniciar novamente."
 }
+
+Initialize-LibsodiumCache -Root $Root
 
 Write-Host "FINNACIALUX DESKTOP - MODO DE DESENVOLVIMENTO" -ForegroundColor Cyan
 Write-Host "Esta janela de terminal é necessária somente durante o desenvolvimento." -ForegroundColor Yellow

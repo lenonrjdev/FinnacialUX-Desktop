@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+. (Join-Path $PSScriptRoot "libsodium-cache.ps1")
+
 function Require-Command([string]$Name, [string]$Message) {
   if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
     throw $Message
@@ -20,6 +22,26 @@ function Require-ProjectFile([string]$RelativePath) {
   if (-not (Test-Path $FullPath -PathType Leaf)) {
     throw "Arquivo obrigatório ausente: $RelativePath. Reaplique o Hotfix 4.0.1 antes de continuar."
   }
+}
+
+function Invoke-CargoCheckWithRetry {
+  $maximumAttempts = 3
+  for ($attempt = 1; $attempt -le $maximumAttempts; $attempt++) {
+    Write-Host "Execução nativa $attempt de $maximumAttempts..." -ForegroundColor DarkGray
+    cargo check --manifest-path .\src-tauri\Cargo.toml
+    if ($LASTEXITCODE -eq 0) {
+      return
+    }
+
+    if ($attempt -lt $maximumAttempts) {
+      Write-Host "A validação nativa falhou. Limpando somente o build temporário do libsodium e tentando novamente..." -ForegroundColor DarkYellow
+      Get-ChildItem ".\src-tauri\target\debug\build" -Directory -Filter "libsodium-sys-stable-*" -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+      Start-Sleep -Seconds ($attempt * 5)
+    }
+  }
+
+  throw "Validação nativa falhou após 3 tentativas. O erro atual não é de TypeScript. Verifique internet, proxy, VPN ou antivírus e envie o trecho final do log."
 }
 
 Write-Host ""
@@ -73,12 +95,11 @@ Invoke-Checked "Typecheck" { npm run typecheck }
 Write-Host "`n==> Gerando o frontend estático" -ForegroundColor Yellow
 Invoke-Checked "Build do Next.js" { npm run build }
 
+Initialize-LibsodiumCache -Root $Root
+
 Write-Host "`n==> Validando SQLCipher, OpenSSL e o aplicativo nativo" -ForegroundColor Yellow
 Write-Host "A primeira compilação desta fase pode demorar mais porque SQLCipher e OpenSSL são incorporados ao executável." -ForegroundColor DarkGray
-cargo check --manifest-path .\src-tauri\Cargo.toml
-if ($LASTEXITCODE -ne 0) {
-  throw "Validação nativa falhou. Confirme Visual Studio Build Tools com C++, Strawberry Perl e, quando solicitado, NASM. Depois feche e abra o PowerShell e execute novamente."
-}
+Invoke-CargoCheckWithRetry
 
 Write-Host "`nConfiguração validada com sucesso." -ForegroundColor Green
 Write-Host "Agora execute .\02_RODAR_DESKTOP.cmd para abrir o aplicativo."
