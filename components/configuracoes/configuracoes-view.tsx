@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel } from "@/components/configuracoes/backups-panel";
+import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
 import { NotificationsPanel } from "@/components/configuracoes/notifications-panel";
 import { PreferencesPanel } from "@/components/configuracoes/preferences-panel";
 import { ProfileSettingsPanel } from "@/components/configuracoes/profile-settings-panel";
@@ -27,10 +28,20 @@ import {
 import { initialAccounts } from "@/data/contas";
 import { usersApi } from "@/lib/api/users";
 import {
+  chooseBackupDestination,
+  chooseBackupSource,
+  createManualBackup,
+  getNativeBackupPreferences,
+  listNativeBackups,
+  openDesktopFolder,
+  previewNativeBackup,
+  removeNativeBackup,
+  restoreNativeBackup,
+  saveNativeBackupPreferences,
+} from "@/lib/desktop/protection";
+import {
   applyAppearance,
-  createSettingsBackup,
   getStoredAppearance,
-  downloadFullSettingsBackup,
   persistAppearance,
   persistFinancialPreferences,
 } from "@/lib/settings";
@@ -44,6 +55,7 @@ import type {
   SecuritySettings,
   SettingsView,
 } from "@/types/configuracoes";
+import type { BackupPreview, NativeBackupRecord } from "@/types/desktop-protection";
 
 type WorkspaceSettingsDocument = {
   preferences: FinancialPreferences;
@@ -59,6 +71,25 @@ const initialWorkspaceSettings: WorkspaceSettingsDocument = {
   backupSettings: initialBackupSettings,
 };
 
+function toBackupSnapshot(record: NativeBackupRecord): BackupSnapshot {
+  return {
+    id: record.id,
+    fileName: record.fileName,
+    filePath: record.filePath,
+    createdAt: record.createdAt,
+    sizeBytes: record.sizeBytes,
+    modulesCount: record.modulesCount,
+    status: record.status,
+    automatic: record.kind === "automatic",
+    kind: record.kind,
+    integrityStatus: record.integrityStatus,
+    checksumSha256: record.checksumSha256,
+    appVersion: record.appVersion,
+    schemaVersion: record.schemaVersion,
+    errorMessage: record.errorMessage,
+  };
+}
+
 export default function ConfiguracoesView() {
   const { user, refreshSession } = useAuth();
   const [view, setView] = useState<SettingsView>("profile");
@@ -72,10 +103,9 @@ export default function ConfiguracoesView() {
     "workspace-settings",
     initialWorkspaceSettings,
   );
-  const [snapshots, setSnapshots] = useFinanceDataState<BackupSnapshot[]>(
-    "backup-snapshots",
-    initialBackupSnapshots,
-  );
+  const [snapshots, setSnapshots] = useState<BackupSnapshot[]>(initialBackupSnapshots);
+  const [restorePreview, setRestorePreview] = useState<BackupPreview | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [accounts] = useFinanceDataState<FinancialAccount[]>("accounts", initialAccounts);
   const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
@@ -87,8 +117,25 @@ export default function ConfiguracoesView() {
     });
     setNotifications(workspaceSettings.notifications);
     setSecurity(workspaceSettings.security);
-    setBackupSettings(workspaceSettings.backupSettings);
   }, [workspaceSettings]);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([getNativeBackupPreferences(), listNativeBackups()])
+      .then(([stored, records]) => {
+        if (!active) return;
+        setBackupSettings({
+          automaticEnabled: stored.automaticEnabled,
+          frequency: stored.frequency,
+          retentionCount: stored.retentionCount,
+          includeAttachments: stored.includeAttachments,
+          lastAutomaticAt: stored.lastAutomaticAt,
+        });
+        setSnapshots(records.map(toBackupSnapshot));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -135,7 +182,12 @@ export default function ConfiguracoesView() {
 
   function showFeedback(message: string) {
     setFeedback(message);
-    window.setTimeout(() => setFeedback(""), 2800);
+    window.setTimeout(() => setFeedback(""), 4200);
+  }
+
+  async function refreshBackups() {
+    const records = await listNativeBackups();
+    setSnapshots(records.map(toBackupSnapshot));
   }
 
   function changePreferences(next: FinancialPreferences) {
@@ -188,6 +240,14 @@ export default function ConfiguracoesView() {
         setWorkspaceSettings((current) => ({ ...current, security }));
         showFeedback(settingsContent.feedback.securitySaved);
       } else if (view === "backups") {
+        const stored = await saveNativeBackupPreferences({
+          automaticEnabled: backupSettings.automaticEnabled,
+          frequency: backupSettings.frequency,
+          retentionCount: backupSettings.retentionCount,
+          includeAttachments: backupSettings.includeAttachments,
+          lastAutomaticAt: backupSettings.lastAutomaticAt ?? null,
+        });
+        setBackupSettings({ ...backupSettings, lastAutomaticAt: stored.lastAutomaticAt });
         setWorkspaceSettings((current) => ({ ...current, backupSettings }));
         showFeedback(settingsContent.feedback.backupSettingsSaved);
       } else {
@@ -200,33 +260,72 @@ export default function ConfiguracoesView() {
     }
   }
 
-  function createBackup() {
-    const payload = createSettingsBackup(profile, preferences, notifications, security, backupSettings);
-    const fileName = downloadFullSettingsBackup(payload);
-    const snapshot: BackupSnapshot = {
-      id: `backup-${Date.now()}`,
-      fileName,
-      createdAt: payload.generatedAt,
-      sizeBytes: new Blob([JSON.stringify(payload)]).size,
-      modulesCount: 9,
-      status: "available",
-      automatic: false,
-    };
-    setSnapshots((current) => [snapshot, ...current]);
-    showFeedback(settingsContent.backups.created);
+  async function createBackup() {
+    setBackupBusy(true);
+    try {
+      const destination = await chooseBackupDestination();
+      if (!destination) return;
+      await createManualBackup(destination);
+      await refreshBackups();
+      showFeedback("Backup nativo criado, verificado e salvo no local escolhido.");
+    } catch (caught) {
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBackupBusy(false);
+    }
   }
 
-  function removeBackup(id: string) {
-    setSnapshots((current) => current.filter((snapshot) => snapshot.id !== id));
-    showFeedback(settingsContent.backups.removed);
+  async function removeBackup(snapshot: BackupSnapshot) {
+    setBackupBusy(true);
+    try {
+      const deleteFile = snapshot.kind === "automatic" || snapshot.kind === "pre_restore";
+      await removeNativeBackup(snapshot.id, deleteFile);
+      await refreshBackups();
+      showFeedback(deleteFile ? "Backup automático e registro removidos." : "Registro removido. O arquivo manual permanece no local escolhido.");
+    } catch (caught) {
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBackupBusy(false);
+    }
   }
 
-  function restoreBackup() {
-    showFeedback(settingsContent.backups.restored);
+  async function selectRestoreFile() {
+    setBackupBusy(true);
+    try {
+      const source = await chooseBackupSource();
+      if (!source) return;
+      setRestorePreview(await previewNativeBackup(source));
+    } catch (caught) {
+      setRestorePreview(null);
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBackupBusy(false);
+    }
   }
 
-  function requestAccountDeletion() {
-    showFeedback(settingsContent.backups.deleteRequested);
+  async function previewSnapshot(snapshot: BackupSnapshot) {
+    if (!snapshot.filePath) return;
+    setBackupBusy(true);
+    try {
+      setRestorePreview(await previewNativeBackup(snapshot.filePath));
+    } catch (caught) {
+      setRestorePreview(null);
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function restoreBackup() {
+    if (!restorePreview?.compatible) return;
+    setBackupBusy(true);
+    try {
+      await restoreNativeBackup(restorePreview.filePath);
+      window.location.replace("/login/");
+    } catch (caught) {
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+      setBackupBusy(false);
+    }
   }
 
   return (
@@ -243,13 +342,7 @@ export default function ConfiguracoesView() {
       <SettingsNavigation value={view} onChange={setView} />
 
       {view === "profile" ? <ProfileSettingsPanel value={profile} onChange={setProfile} /> : null}
-      {view === "preferences" ? (
-        <PreferencesPanel
-          value={preferences}
-          accounts={accounts}
-          onChange={changePreferences}
-        />
-      ) : null}
+      {view === "preferences" ? <PreferencesPanel value={preferences} accounts={accounts} onChange={changePreferences} /> : null}
       {view === "notifications" ? <NotificationsPanel value={notifications} onChange={setNotifications} /> : null}
       {view === "security" ? <SecurityPanel value={security} sessions={sessions} onChange={setSecurity} onSessionsChange={setSessions} onFeedback={showFeedback} /> : null}
       {view === "activity" ? <ActivityPanel entries={initialActivityLog} /> : null}
@@ -257,13 +350,19 @@ export default function ConfiguracoesView() {
         <BackupsPanel
           settings={backupSettings}
           snapshots={snapshots}
+          restorePreview={restorePreview}
+          busy={backupBusy}
           onSettingsChange={setBackupSettings}
           onCreate={createBackup}
+          onRefresh={refreshBackups}
           onRemove={removeBackup}
+          onSelectRestore={selectRestoreFile}
+          onPreviewSnapshot={previewSnapshot}
           onRestore={restoreBackup}
-          onDeleteAccount={requestAccountDeletion}
+          onOpenFolder={() => openDesktopFolder("backups").then(() => undefined)}
         />
       ) : null}
+      {view === "diagnostics" ? <DiagnosticsPanel onFeedback={showFeedback} /> : null}
 
       {feedback ? <div className="transaction-feedback settings-feedback" role="status"><CheckIcon /> {feedback}</div> : null}
     </div>

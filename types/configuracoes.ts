@@ -4,7 +4,8 @@ export type SettingsView =
   | "notifications"
   | "security"
   | "activity"
-  | "backups";
+  | "backups"
+  | "diagnostics";
 
 export type AppearanceMode = "light" | "dark" | "system";
 export type DateFormat = "dd/MM/yyyy" | "MM/dd/yyyy" | "yyyy-MM-dd";
@@ -18,7 +19,7 @@ export type ActivityType =
   | "backup";
 export type ActivityStatus = "success" | "attention" | "blocked";
 export type SessionDeviceType = "desktop" | "mobile" | "tablet";
-export type BackupStatus = "available" | "processing" | "failed";
+export type BackupStatus = "available" | "processing" | "missing" | "failed";
 
 export type ProfileSettings = {
   name: string;
@@ -87,6 +88,7 @@ export type BackupSettings = {
   frequency: BackupFrequency;
   retentionCount: number;
   includeAttachments: boolean;
+  lastAutomaticAt?: string | null;
 };
 
 export type BackupSnapshot = {
@@ -97,6 +99,13 @@ export type BackupSnapshot = {
   modulesCount: number;
   status: BackupStatus;
   automatic: boolean;
+  kind?: "manual" | "automatic" | "pre_restore";
+  filePath?: string;
+  integrityStatus?: "ok" | "warning" | "failed";
+  checksumSha256?: string | null;
+  appVersion?: string;
+  schemaVersion?: number;
+  errorMessage?: string | null;
 };
 
 export type PasswordChangeInput = {

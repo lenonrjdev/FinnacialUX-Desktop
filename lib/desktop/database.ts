@@ -22,6 +22,20 @@ export async function getDesktopDatabase(): Promise<Database> {
   return databasePromise;
 }
 
+export async function closeDesktopDatabase(): Promise<void> {
+  const current = databasePromise;
+  databasePromise = null;
+  if (current) {
+    const database = await current;
+    await database.close();
+    return;
+  }
+
+  if (!hasTauriRuntime()) return;
+  const { default: SqlDatabase } = await import("@tauri-apps/plugin-sql");
+  await SqlDatabase.get(DATABASE_URL).close();
+}
+
 export function isDesktopRuntime(): boolean {
   return hasTauriRuntime();
 }

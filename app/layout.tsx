@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { DesktopProtectionProvider } from "@/components/providers/desktop-protection-provider";
+import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
 import { metadataContent } from "@/content/metadata";
 import "./globals.css";
@@ -44,7 +46,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: appearanceBootstrap }} />
       </head>
       <body>
-        <AuthProvider><AppRouteShell>{children}</AppRouteShell></AuthProvider>
+        <DesktopRecoveryGate>
+          <DesktopProtectionProvider>
+            <AuthProvider><AppRouteShell>{children}</AppRouteShell></AuthProvider>
+          </DesktopProtectionProvider>
+        </DesktopRecoveryGate>
       </body>
     </html>
   );

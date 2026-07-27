@@ -1,7 +1,8 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLite.
+React, TypeScript e SQLite. A versão `0.2.0` inclui proteção de dados, backups
+nativos, restauração segura, diagnóstico e recuperação após encerramento inesperado.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -78,13 +79,20 @@ O Desktop não possui usuário de demonstração. Na primeira abertura:
 3. o aplicativo criará um espaço financeiro pessoal vazio;
 4. todos os registros seguintes serão salvos no SQLite deste computador.
 
-## Persistência
+## Persistência e proteção de dados
 
 Os dados permanecem no computador depois de fechar o aplicativo ou reiniciar o
 Windows. Não apague a pasta de dados do aplicativo sem antes criar um backup.
 
+Em **Configurações → Backups**, é possível criar arquivos `.fuxbackup`, ativar
+backups automáticos e restaurar uma cópia validada. Em **Configurações →
+Diagnóstico**, o aplicativo verifica a integridade do SQLite, mostra o histórico
+de schema e exporta um pacote técnico sem informações financeiras.
+
 Leia também:
 
 - `FASE_1_DESKTOP.md`;
+- `FASE_2_DESKTOP_PROTECAO_DADOS.md`;
+- `docs/OPERACAO_BACKUP_RECUPERACAO.md`;
 - `docs/ARQUITETURA_DESKTOP.md`;
 - `docs/CORE_REUSE_MANIFEST.md`.

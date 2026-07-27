@@ -1,6 +1,7 @@
 import {
   ArchiveIcon,
   BellIcon,
+  DatabaseIcon,
   HistoryIcon,
   PaletteIcon,
   ShieldIcon,
@@ -16,6 +17,7 @@ const navigation: Array<{ key: SettingsView; icon: React.ReactNode }> = [
   { key: "security", icon: <ShieldIcon /> },
   { key: "activity", icon: <HistoryIcon /> },
   { key: "backups", icon: <ArchiveIcon /> },
+  { key: "diagnostics", icon: <DatabaseIcon /> },
 ];
 
 export function SettingsNavigation({ value, onChange }: { value: SettingsView; onChange: (view: SettingsView) => void }) {

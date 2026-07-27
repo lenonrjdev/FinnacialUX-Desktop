@@ -10,7 +10,7 @@ import { UserMenu } from "@/components/dashboard/user-menu";
 import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
 import { useAuth } from "@/components/providers/auth-provider";
 import { FinanceDataProvider } from "@/components/providers/finance-data-provider";
-import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, SunIcon } from "@/components/shared/icons";
+import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, ShieldIcon, SunIcon } from "@/components/shared/icons";
 import { accessContent } from "@/content/acessos";
 import { dashboardContent, dashboardNavigation } from "@/content/dashboard";
 import { integrationContent } from "@/content/integracao";
@@ -18,6 +18,7 @@ import { usersApi } from "@/lib/api/users";
 import { initialFinancialPreferences } from "@/data/configuracoes";
 import { dashboardData } from "@/data/dashboard";
 import { createInitials, getStoredWorkspaceId, persistWorkspaceId } from "@/lib/access-control";
+import { isSafeModeEnabled, setSafeModeEnabled } from "@/lib/desktop/protection";
 import {
   applyAppearance,
   getOppositeAppearance,
@@ -52,8 +53,19 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
   const [resolvedAppearance, setResolvedAppearance] = useState<"light" | "dark">("light");
   const [appearanceSaving, setAppearanceSaving] = useState(false);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const [safeMode, setSafeMode] = useState(false);
   const redirectingToLoginRef = useRef(false);
   const allNavigationItems = useMemo(() => dashboardNavigation.flatMap((group) => group.items), []);
+
+
+  useEffect(() => {
+    setSafeMode(isSafeModeEnabled());
+    function handleSafeModeChange(event: Event) {
+      setSafeMode(Boolean((event as CustomEvent<boolean>).detail));
+    }
+    window.addEventListener("finnacialux-safe-mode-change", handleSafeModeChange);
+    return () => window.removeEventListener("finnacialux-safe-mode-change", handleSafeModeChange);
+  }, []);
 
   useEffect(() => {
     if (loading || user || redirectingToLoginRef.current) return;
@@ -161,6 +173,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
 
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? workspaces[0];
   const isReadOnly = selectedWorkspace.role === "viewer";
+  const effectiveReadOnly = isReadOnly || safeMode;
 
   function toggleAppearance() {
     if (appearanceSaving) return;
@@ -215,8 +228,8 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="top-actions">
-            {isReadOnly ? (
-              <span className="new-entry-button read-only-button">{dashboardContent.topbar.readOnly}</span>
+            {effectiveReadOnly ? (
+              <span className="new-entry-button read-only-button">{safeMode ? "Modo seguro" : dashboardContent.topbar.readOnly}</span>
             ) : (
               <Link className="new-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon />{dashboardContent.topbar.newEntry}</Link>
             )}
@@ -241,7 +254,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
         <header className="mobile-header phase-thirteen-mobile-header">
           <Brand />
           <div className="mobile-header-actions">
-            {!isReadOnly ? <Link className="mobile-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon /><span>{dashboardContent.topbar.mobileNewEntry}</span></Link> : null}
+            {!effectiveReadOnly ? <Link className="mobile-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon /><span>{dashboardContent.topbar.mobileNewEntry}</span></Link> : null}
             <button
               className="icon-button theme-toggle-button"
               type="button"
@@ -272,7 +285,14 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
           </nav>
         ) : null}
 
-        <FinanceDataProvider workspaceId={selectedWorkspace.id} readOnly={isReadOnly}>
+        {safeMode ? (
+          <div className="desktop-safe-mode-banner" role="status">
+            <ShieldIcon />
+            <div><strong>Modo seguro ativo</strong><span>Os dados podem ser consultados, mas nenhuma alteração será salva nesta sessão.</span></div>
+            <button type="button" onClick={() => { setSafeModeEnabled(false); window.location.reload(); }}>Sair do modo seguro</button>
+          </div>
+        ) : null}
+        <FinanceDataProvider workspaceId={selectedWorkspace.id} readOnly={effectiveReadOnly}>
           <main className="page-content finance-page-content">{children}</main>
         </FinanceDataProvider>
         <footer className="footer finance-footer">

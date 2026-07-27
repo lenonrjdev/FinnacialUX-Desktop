@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 import { getDesktopDatabase } from "@/lib/desktop/database";
+import { isSafeModeEnabled } from "@/lib/desktop/protection";
 import type { FinanceDataDocument, FinanceDataDocuments } from "@/lib/api/finance-data";
 
 function readWorkspaceId(): string {
@@ -48,6 +49,9 @@ export const desktopFinanceData = {
   },
 
   async save<T>(module: string, data: T): Promise<{ module: string; data: T; updatedAt: string }> {
+    if (isSafeModeEnabled()) {
+      throw new ApiError("O modo seguro está ativo. Saia do modo seguro para alterar dados.", 423);
+    }
     const database = await getDesktopDatabase();
     const workspaceId = readWorkspaceId();
     const updatedAt = new Date().toISOString();
@@ -66,6 +70,9 @@ export const desktopFinanceData = {
   },
 
   async remove(module: string): Promise<{ message: string }> {
+    if (isSafeModeEnabled()) {
+      throw new ApiError("O modo seguro está ativo. Saia do modo seguro para alterar dados.", 423);
+    }
     const database = await getDesktopDatabase();
     await database.execute(
       "DELETE FROM finance_documents WHERE workspace_id = $1 AND module = $2",

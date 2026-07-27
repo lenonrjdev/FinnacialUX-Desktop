@@ -55,8 +55,9 @@ export const initialActivityLog: ActivityLogEntry[] = [];
 export const initialBackupSettings: BackupSettings = {
   automaticEnabled: false,
   frequency: "weekly",
-  retentionCount: 5,
+  retentionCount: 6,
   includeAttachments: false,
+  lastAutomaticAt: null,
 };
 
 export const initialBackupSnapshots: BackupSnapshot[] = [];

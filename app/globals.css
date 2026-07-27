@@ -19830,3 +19830,672 @@ html[data-theme="dark"] .smart-source-badge {
     margin-left: 0;
   }
 }
+
+/* =========================================================
+   FINNACIALUX DESKTOP — FASE 2
+   Proteção de dados, backups, diagnóstico e modo seguro
+   ========================================================= */
+
+.desktop-recovery-loading {
+  min-height: 100vh;
+  background: var(--page-background, #f7f7f8);
+}
+
+.desktop-recovery-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(90, 92, 246, 0.08), transparent 38%),
+    var(--page-background, #f7f7f8);
+  color: var(--text-primary, #15151b);
+}
+
+.desktop-recovery-card {
+  width: min(840px, 100%);
+  padding: 34px;
+  border: 1px solid #e7e7eb;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(16, 16, 24, 0.12);
+}
+
+.desktop-recovery-card > header {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.desktop-recovery-card h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(25px, 3vw, 36px);
+  line-height: 1.15;
+}
+
+.desktop-recovery-card p,
+.desktop-recovery-card footer {
+  color: #6d6d78;
+  line-height: 1.65;
+}
+
+.desktop-recovery-icon {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #9a6500;
+  background: #fff4d7;
+}
+
+.desktop-recovery-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.desktop-recovery-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 15px 17px;
+  border-radius: 14px;
+  border: 1px solid #e5e5e9;
+}
+
+.desktop-recovery-result.ok {
+  color: #17633a;
+  background: #edf9f2;
+  border-color: #ccead8;
+}
+
+.desktop-recovery-result.failed,
+.desktop-recovery-error {
+  color: #9b2e2e;
+  background: #fff0f0;
+  border-color: #f2cccc;
+}
+
+.desktop-recovery-result > svg,
+.desktop-recovery-result > span > svg {
+  width: 22px;
+  height: 22px;
+}
+
+.desktop-recovery-result div {
+  display: grid;
+  gap: 3px;
+}
+
+.desktop-recovery-result span,
+.desktop-recovery-result small {
+  font-size: 12px;
+}
+
+.desktop-recovery-error {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid;
+  border-radius: 12px;
+}
+
+.desktop-recovery-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.desktop-recovery-actions button,
+.desktop-recovery-restore-confirmation button {
+  justify-content: center;
+}
+
+.desktop-recovery-restore-confirmation {
+  margin-top: 18px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #dedee5;
+  border-radius: 14px;
+  background: #fafafd;
+}
+
+.desktop-recovery-restore-confirmation div {
+  display: grid;
+  gap: 5px;
+}
+
+.desktop-recovery-restore-confirmation span {
+  color: #6f6f7a;
+  font-size: 12px;
+}
+
+.desktop-recovery-card footer {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #ececf0;
+  font-size: 12px;
+}
+
+.desktop-safe-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 24px;
+  color: #6f4b00;
+  background: #fff4d7;
+  border-bottom: 1px solid #eed79d;
+}
+
+.desktop-safe-mode-banner > svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+}
+
+.desktop-safe-mode-banner div {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.desktop-safe-mode-banner span {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.desktop-safe-mode-banner button {
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.backup-header-actions,
+.diagnostic-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.backup-policy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #dce8e0;
+  border-radius: 12px;
+  color: #38634a;
+  background: #f4faf6;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.backup-policy-note svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.backup-last-run {
+  display: block;
+  margin-top: 10px;
+  color: #74747f;
+}
+
+.backup-empty-state {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 28px;
+  text-align: center;
+  color: #777783;
+  border: 1px dashed #d9d9df;
+  border-radius: 15px;
+}
+
+.backup-empty-state svg {
+  width: 28px;
+  height: 28px;
+}
+
+.backup-empty-state strong {
+  color: #26262d;
+}
+
+.backup-empty-state span {
+  max-width: 360px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.restore-confirmation-field {
+  margin-top: 13px;
+}
+
+.restore-confirmation-field input {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.backup-safety-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backup-safety-card li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #555561;
+  font-size: 11px;
+}
+
+.backup-safety-card li svg {
+  width: 16px;
+  height: 16px;
+  color: #268451;
+}
+
+.backup-privacy-card p {
+  margin: 0;
+  color: #696975;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.backup-status.missing {
+  color: #9a6500;
+  background: #fff5dc;
+}
+
+.diagnostics-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+  gap: 18px;
+}
+
+.diagnostics-main-panel,
+.diagnostics-sidebar {
+  min-width: 0;
+}
+
+.diagnostics-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.diagnostic-panel-header {
+  gap: 20px;
+}
+
+.diagnostic-integrity-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 18px;
+  padding: 17px;
+  border: 1px solid;
+  border-radius: 15px;
+}
+
+.diagnostic-integrity-card.ok {
+  color: #236840;
+  background: #f0faf4;
+  border-color: #cce8d6;
+}
+
+.diagnostic-integrity-card.failed {
+  color: #983232;
+  background: #fff2f2;
+  border-color: #efcece;
+}
+
+.diagnostic-integrity-card > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.diagnostic-integrity-card svg {
+  width: 20px;
+  height: 20px;
+}
+
+.diagnostic-integrity-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.diagnostic-integrity-card p,
+.diagnostic-integrity-card small {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.diagnostic-metrics-grid,
+.diagnostic-system-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.diagnostic-metrics-grid article,
+.diagnostic-system-grid article {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  background: #fbfbfc;
+}
+
+.diagnostic-metrics-grid article {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.diagnostic-metrics-grid article > span {
+  width: 35px;
+  height: 35px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #50505c;
+  background: #ededf1;
+}
+
+.diagnostic-metrics-grid svg {
+  width: 18px;
+  height: 18px;
+}
+
+.diagnostic-metrics-grid div,
+.diagnostic-system-grid article {
+  display: grid;
+  gap: 4px;
+}
+
+.diagnostic-metrics-grid small,
+.diagnostic-system-grid small,
+.diagnostic-system-grid span,
+.diagnostic-metrics-grid p {
+  margin: 0;
+  color: #777783;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-metrics-grid strong,
+.diagnostic-system-grid strong {
+  color: #24242b;
+  font-size: 13px;
+}
+
+.diagnostic-system-grid {
+  margin-top: 12px;
+}
+
+.diagnostic-path-list {
+  display: grid;
+  gap: 9px;
+}
+
+.diagnostic-path-list button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #e7e7ec;
+  border-radius: 12px;
+  color: inherit;
+  background: #fbfbfc;
+  cursor: pointer;
+}
+
+.diagnostic-path-list button > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.diagnostic-path-list button span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.diagnostic-path-list small {
+  color: #7b7b86;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-export-card .primary-action-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.migration-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.migration-history-list article {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.migration-history-list article > span {
+  min-width: 34px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  background: #eeeeF2;
+}
+
+.migration-history-list div {
+  display: grid;
+  gap: 2px;
+}
+
+.migration-history-list strong {
+  font-size: 10px;
+}
+
+.migration-history-list small {
+  color: #7a7a85;
+  font-size: 9px;
+}
+
+.diagnostic-loading-card,
+.diagnostic-error-card {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.diagnostic-loading-card svg {
+  animation: dashboard-spin 1s linear infinite;
+}
+
+.diagnostic-error-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.diagnostic-inline-error {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px;
+  color: #9a3535;
+  background: #fff1f1;
+  border: 1px solid #efcdcd;
+  border-radius: 11px;
+  font-size: 11px;
+}
+
+html[data-theme="dark"] .desktop-recovery-loading,
+html[data-theme="dark"] .desktop-recovery-screen {
+  background-color: #0d0d13;
+  color: #f5f5f7;
+}
+
+html[data-theme="dark"] .desktop-recovery-card {
+  background: #15151d;
+  border-color: #2a2a35;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+html[data-theme="dark"] .desktop-recovery-card p,
+html[data-theme="dark"] .desktop-recovery-card footer,
+html[data-theme="dark"] .desktop-recovery-restore-confirmation span {
+  color: #a0a0ad;
+}
+
+html[data-theme="dark"] .desktop-recovery-card footer,
+html[data-theme="dark"] .desktop-recovery-restore-confirmation {
+  border-color: #30303b;
+}
+
+html[data-theme="dark"] .desktop-recovery-restore-confirmation {
+  background: #1b1b24;
+}
+
+html[data-theme="dark"] .desktop-recovery-result.ok,
+html[data-theme="dark"] .backup-policy-note,
+html[data-theme="dark"] .diagnostic-integrity-card.ok {
+  color: #86d5a6;
+  background: #14241b;
+  border-color: #294936;
+}
+
+html[data-theme="dark"] .desktop-recovery-result.failed,
+html[data-theme="dark"] .desktop-recovery-error,
+html[data-theme="dark"] .diagnostic-integrity-card.failed,
+html[data-theme="dark"] .diagnostic-inline-error {
+  color: #f0a2a2;
+  background: #291717;
+  border-color: #573030;
+}
+
+html[data-theme="dark"] .desktop-safe-mode-banner {
+  color: #edcf84;
+  background: #29220f;
+  border-color: #4e411c;
+}
+
+html[data-theme="dark"] .backup-empty-state {
+  color: #9999a6;
+  border-color: #3a3a45;
+}
+
+html[data-theme="dark"] .backup-empty-state strong,
+html[data-theme="dark"] .diagnostic-metrics-grid strong,
+html[data-theme="dark"] .diagnostic-system-grid strong {
+  color: #f0f0f3;
+}
+
+html[data-theme="dark"] .diagnostic-metrics-grid article,
+html[data-theme="dark"] .diagnostic-system-grid article,
+html[data-theme="dark"] .diagnostic-path-list button {
+  background: #181820;
+  border-color: #30303a;
+}
+
+html[data-theme="dark"] .diagnostic-metrics-grid article > span,
+html[data-theme="dark"] .migration-history-list article > span {
+  color: #d7d7df;
+  background: #292933;
+}
+
+html[data-theme="dark"] .backup-safety-card li,
+html[data-theme="dark"] .backup-privacy-card p,
+html[data-theme="dark"] .diagnostic-metrics-grid small,
+html[data-theme="dark"] .diagnostic-system-grid small,
+html[data-theme="dark"] .diagnostic-system-grid span,
+html[data-theme="dark"] .diagnostic-metrics-grid p,
+html[data-theme="dark"] .diagnostic-path-list small,
+html[data-theme="dark"] .migration-history-list small {
+  color: #9999a5;
+}
+
+@media (max-width: 1080px) {
+  .diagnostics-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .migration-history-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .desktop-recovery-screen {
+    padding: 16px;
+  }
+
+  .desktop-recovery-card {
+    padding: 22px;
+    border-radius: 17px;
+  }
+
+  .desktop-recovery-card > header,
+  .desktop-recovery-restore-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .desktop-recovery-actions,
+  .diagnostic-metrics-grid,
+  .diagnostic-system-grid,
+  .diagnostics-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-integrity-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .diagnostic-integrity-card > small {
+    grid-column: 1 / -1;
+  }
+}
