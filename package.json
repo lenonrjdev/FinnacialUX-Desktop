@@ -1,6 +1,6 @@
 {
   "name": "finnacialux-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "FinnacialUX Desktop — gestão financeira pessoal offline com Tauri 2 e SQLite.",
   "scripts": {
