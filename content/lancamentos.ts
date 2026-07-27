@@ -1,0 +1,158 @@
+import type {
+  TransactionPeriod,
+  TransactionStatus,
+  TransactionType,
+} from "@/types/lancamentos";
+
+export const transactionsContent = {
+  heading: {
+    eyebrow: "Organização financeira",
+    title: "Lançamentos",
+    description:
+      "Registre, encontre e acompanhe todas as entradas, saídas e transferências da sua vida financeira.",
+    exportAction: "Exportar",
+    newAction: "Novo lançamento",
+  },
+  summary: {
+    ariaLabel: "Resumo dos lançamentos do mês",
+    cards: [
+      {
+        id: "income",
+        label: "Entradas do mês",
+        helper: "Valores recebidos e concluídos",
+      },
+      {
+        id: "expense",
+        label: "Saídas do mês",
+        helper: "Despesas pagas e concluídas",
+      },
+      {
+        id: "result",
+        label: "Resultado do mês",
+        helper: "Entradas menos saídas",
+      },
+      {
+        id: "pending",
+        label: "Movimentações pendentes",
+        helper: "Valores aguardando conclusão",
+      },
+    ],
+  },
+  filters: {
+    searchPlaceholder: "Buscar por descrição, categoria ou conta",
+    searchAriaLabel: "Buscar lançamentos",
+    typeLabel: "Tipo",
+    periodLabel: "Período",
+    statusLabel: "Status",
+    accountLabel: "Conta",
+    allTypes: "Todos os tipos",
+    allStatuses: "Todos os status",
+    allAccounts: "Todas as contas",
+    clear: "Limpar filtros",
+    periodOptions: [
+      { value: "current-month", label: "Julho de 2026" },
+      { value: "last-30-days", label: "Últimos 30 dias" },
+      { value: "all", label: "Todo o período" },
+    ] satisfies Array<{ value: TransactionPeriod; label: string }>,
+  },
+  types: {
+    income: "Receita",
+    expense: "Despesa",
+    transfer: "Transferência",
+  } satisfies Record<TransactionType, string>,
+  statuses: {
+    completed: "Concluído",
+    pending: "Pendente",
+    overdue: "Atrasado",
+  } satisfies Record<TransactionStatus, string>,
+  list: {
+    kicker: "Movimentações",
+    title: "Todos os lançamentos",
+    countSuffix: "lançamentos encontrados",
+    columns: {
+      description: "Descrição",
+      date: "Data",
+      account: "Conta",
+      status: "Status",
+      value: "Valor",
+      actions: "Ações",
+    },
+    emptyTitle: "Nenhum lançamento encontrado",
+    emptyDescription:
+      "Ajuste os filtros ou registre uma nova movimentação financeira.",
+    mobileDetailsSeparator: "•",
+    actions: {
+      duplicate: "Duplicar",
+      delete: "Excluir",
+      morePrefix: "Mais opções de",
+    },
+  },
+  dialog: {
+    eyebrow: "Nova movimentação",
+    title: "Adicionar lançamento",
+    description:
+      "Preencha as informações para atualizar sua organização financeira.",
+    closeAriaLabel: "Fechar novo lançamento",
+    typeLegend: "Tipo de lançamento",
+    fields: {
+      description: "Descrição",
+      descriptionPlaceholder: "Ex.: Mercado do mês",
+      amount: "Valor",
+      amountPlaceholder: "0,00",
+      date: "Data",
+      category: "Categoria",
+      account: "Conta de origem",
+      destinationAccount: "Conta de destino",
+      paymentMethod: "Forma de pagamento",
+      status: "Status",
+      note: "Observação",
+      notePlaceholder: "Informação opcional sobre o lançamento",
+    },
+    cancel: "Cancelar",
+    submit: "Salvar lançamento",
+    success: "Lançamento adicionado com sucesso.",
+    duplicateSuccess: "Lançamento duplicado com sucesso.",
+    deleteSuccess: "Lançamento excluído da visualização.",
+    exportSuccess: "Arquivo CSV exportado com sucesso.",
+  },
+  validation: {
+    required: "Preencha os campos obrigatórios.",
+    positiveAmount: "Informe um valor maior que zero.",
+    differentAccounts: "Escolha contas diferentes para a transferência.",
+  },
+  options: {
+    paymentMethods: [
+      "Pix",
+      "Cartão de débito",
+      "Cartão de crédito",
+      "Boleto",
+      "Dinheiro",
+      "Transferência bancária",
+    ],
+    categories: {
+      income: [
+        "Serviços",
+        "Vendas",
+        "Rendimentos",
+        "Reembolso",
+        "Aluguel recebido",
+        "Ajuda familiar",
+        "Outros recebimentos",
+      ],
+      expense: [
+        "Moradia",
+        "Alimentação",
+        "Transporte",
+        "Saúde",
+        "Educação",
+        "Lazer",
+        "Compras",
+        "Assinaturas",
+        "Contas residenciais",
+        "Cartão de crédito",
+        "Outras despesas",
+      ],
+      transfer: ["Transferência entre contas"],
+    } satisfies Record<TransactionType, readonly string[]>,
+  },
+} as const;

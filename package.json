@@ -1,0 +1,40 @@
+{
+  "name": "finnacialux-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FinnacialUX Desktop — gestão financeira pessoal offline com Tauri 2 e SQLite.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:web": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "check": "npm run check:web && cargo check --manifest-path src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-sql": "^2.0.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
