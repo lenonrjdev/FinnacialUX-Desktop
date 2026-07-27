@@ -1,3 +1,4 @@
+mod command_worker;
 mod encrypted_database;
 mod protection;
 mod security;

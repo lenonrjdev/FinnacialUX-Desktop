@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use sqlx::{Connection, Row, SqliteConnection};
+use crate::command_worker::run_local_async_worker;
 use crate::encrypted_database::{
     connect_app_database, connect_plaintext_path, export_plaintext_snapshot,
     replace_from_plaintext_snapshot, DatabaseEncryptionStatus, EncryptedDatabaseState,
@@ -746,17 +747,16 @@ fn automatic_backup_due(preferences: &BackupPreferences) -> bool {
     elapsed >= required
 }
 
-#[tauri::command]
-pub async fn create_manual_backup(
-    app: AppHandle,
-    database: State<'_, EncryptedDatabaseState>,
+async fn create_manual_backup_internal(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
     destination: String,
     encryption_mode: String,
     credential: Option<String>,
 ) -> Result<BackupOperationResult, String> {
     let record = create_backup_internal(
-        &app,
-        &database,
+        app,
+        database,
         PathBuf::from(destination),
         "manual",
         &encryption_mode,
@@ -769,13 +769,32 @@ pub async fn create_manual_backup(
     })
 }
 
-#[tauri::command]
-pub async fn run_automatic_backup(
+#[tauri::command(async)]
+pub fn create_manual_backup(
     app: AppHandle,
-    database: State<'_, EncryptedDatabaseState>,
+    destination: String,
+    encryption_mode: String,
+    credential: Option<String>,
+) -> Result<BackupOperationResult, String> {
+    run_local_async_worker("finnacialux-manual-backup", move || async move {
+        let database = app.state::<EncryptedDatabaseState>();
+        create_manual_backup_internal(
+            &app,
+            &database,
+            destination,
+            encryption_mode,
+            credential,
+        )
+        .await
+    })
+}
+
+async fn run_automatic_backup_internal(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
     credential: Option<String>,
 ) -> Result<AutomaticBackupResult, String> {
-    let preferences = load_backup_preferences_internal(&app, &database).await?;
+    let preferences = load_backup_preferences_internal(app, database).await?;
     if !preferences.automatic_enabled {
         return Ok(AutomaticBackupResult {
             created: false,
@@ -793,7 +812,7 @@ pub async fn run_automatic_backup(
 
     let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     let file_name = format!("FinnacialUX-automatico-{timestamp}.{BACKUP_EXTENSION}");
-    let destination = backups_dir(&app)?.join(file_name);
+    let destination = backups_dir(app)?.join(file_name);
     if preferences.encryption_mode == "device" && credential.is_none() {
         return Ok(AutomaticBackupResult {
             created: false,
@@ -802,20 +821,31 @@ pub async fn run_automatic_backup(
         });
     }
     let record = create_backup_internal(
-        &app,
-        &database,
+        app,
+        database,
         destination,
         "automatic",
         &preferences.encryption_mode,
         credential.as_deref(),
     )
     .await?;
-    update_last_automatic_at(&app, &database, &record.created_at).await?;
-    remove_old_automatic_backups(&app, &database, preferences.retention_count).await?;
+    update_last_automatic_at(app, database, &record.created_at).await?;
+    remove_old_automatic_backups(app, database, preferences.retention_count).await?;
     Ok(AutomaticBackupResult {
         created: true,
         reason: "Backup automático concluído.".to_string(),
         record: Some(record),
+    })
+}
+
+#[tauri::command(async)]
+pub fn run_automatic_backup(
+    app: AppHandle,
+    credential: Option<String>,
+) -> Result<AutomaticBackupResult, String> {
+    run_local_async_worker("finnacialux-automatic-backup", move || async move {
+        let database = app.state::<EncryptedDatabaseState>();
+        run_automatic_backup_internal(&app, &database, credential).await
     })
 }
 
@@ -980,10 +1010,9 @@ pub async fn preview_backup(
     })
 }
 
-#[tauri::command]
-pub async fn restore_backup(
-    app: AppHandle,
-    database_state: State<'_, EncryptedDatabaseState>,
+async fn restore_backup_internal(
+    app: &AppHandle,
+    database_state: &EncryptedDatabaseState,
     source: String,
     credential: Option<String>,
     safety_credential: Option<String>,
@@ -1002,12 +1031,12 @@ pub async fn restore_backup(
     }
 
     let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
-    let safety_destination = backups_dir(&app)?
+    let safety_destination = backups_dir(app)?
         .join(format!("FinnacialUX-antes-da-restauracao-{timestamp}.{BACKUP_EXTENSION}"));
     let safety_mode = if safety_credential.is_some() { "device" } else { "none" };
     let safety_record = create_backup_internal(
-        &app,
-        &database_state,
+        app,
+        database_state,
         safety_destination,
         "pre_restore",
         safety_mode,
@@ -1018,13 +1047,13 @@ pub async fn restore_backup(
     let temporary_directory = TempDir::new().map_err(to_error)?;
     let snapshot_path = temporary_directory.path().join("finnacialux-restored.sqlite");
     fs::write(&snapshot_path, database_bytes).map_err(to_error)?;
-    replace_from_plaintext_snapshot(&app, &database_state, &snapshot_path).await?;
+    replace_from_plaintext_snapshot(app, database_state, &snapshot_path).await?;
 
-    let restored_integrity = validate_current_database(&app, &database_state).await?;
+    let restored_integrity = validate_current_database(app, database_state).await?;
     if !restored_integrity.ok {
         return Err("O banco restaurado não passou na validação final.".to_string());
     }
-    if let Err(error) = insert_backup_history(&app, &database_state, &safety_record).await {
+    if let Err(error) = insert_backup_history(app, database_state, &safety_record).await {
         log::warn!("pre_restore_history_reinsert_failed error={}", error);
     }
     log::warn!("backup_restored schema={} encryption={}", manifest.schema_version, manifest.encryption_mode);
@@ -1033,6 +1062,26 @@ pub async fn restore_backup(
         safety_backup_path: safety_record.file_path,
         restored_from: source,
         message: "Dados restaurados. Entre novamente para continuar.".to_string(),
+    })
+}
+
+#[tauri::command(async)]
+pub fn restore_backup(
+    app: AppHandle,
+    source: String,
+    credential: Option<String>,
+    safety_credential: Option<String>,
+) -> Result<RestoreOperationResult, String> {
+    run_local_async_worker("finnacialux-restore-backup", move || async move {
+        let database_state = app.state::<EncryptedDatabaseState>();
+        restore_backup_internal(
+            &app,
+            &database_state,
+            source,
+            credential,
+            safety_credential,
+        )
+        .await
     })
 }
 

@@ -24,24 +24,12 @@ function Require-ProjectFile([string]$RelativePath) {
   }
 }
 
-function Invoke-CargoCheckWithRetry {
-  $maximumAttempts = 3
-  for ($attempt = 1; $attempt -le $maximumAttempts; $attempt++) {
-    Write-Host "Execução nativa $attempt de $maximumAttempts..." -ForegroundColor DarkGray
-    cargo check --manifest-path .\src-tauri\Cargo.toml
-    if ($LASTEXITCODE -eq 0) {
-      return
-    }
-
-    if ($attempt -lt $maximumAttempts) {
-      Write-Host "A validação nativa falhou. Limpando somente o build temporário do libsodium e tentando novamente..." -ForegroundColor DarkYellow
-      Get-ChildItem ".\src-tauri\target\debug\build" -Directory -Filter "libsodium-sys-stable-*" -ErrorAction SilentlyContinue |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-      Start-Sleep -Seconds ($attempt * 5)
-    }
+function Invoke-CargoCheck {
+  Write-Host "Executando validação nativa..." -ForegroundColor DarkGray
+  cargo check --manifest-path .\src-tauri\Cargo.toml
+  if ($LASTEXITCODE -ne 0) {
+    throw "Validação nativa falhou com o código $LASTEXITCODE. O cache do libsodium já foi preparado; corrija o primeiro erro Rust exibido acima antes de repetir."
   }
-
-  throw "Validação nativa falhou após 3 tentativas. O erro atual não é de TypeScript. Verifique internet, proxy, VPN ou antivírus e envie o trecho final do log."
 }
 
 Write-Host ""
@@ -99,7 +87,7 @@ Initialize-LibsodiumCache -Root $Root
 
 Write-Host "`n==> Validando SQLCipher, OpenSSL e o aplicativo nativo" -ForegroundColor Yellow
 Write-Host "A primeira compilação desta fase pode demorar mais porque SQLCipher e OpenSSL são incorporados ao executável." -ForegroundColor DarkGray
-Invoke-CargoCheckWithRetry
+Invoke-CargoCheck
 
 Write-Host "`nConfiguração validada com sucesso." -ForegroundColor Green
 Write-Host "Agora execute .\02_RODAR_DESKTOP.cmd para abrir o aplicativo."

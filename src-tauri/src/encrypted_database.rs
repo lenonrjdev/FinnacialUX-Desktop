@@ -1,3 +1,4 @@
+use crate::command_worker::run_local_async_worker;
 use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::Utc;
@@ -509,10 +510,9 @@ async fn persist_security_state(
     Ok(())
 }
 
-#[tauri::command]
-pub async fn encrypted_database_open(
-    app: AppHandle,
-    state: State<'_, EncryptedDatabaseState>,
+async fn encrypted_database_open_internal(
+    app: &AppHandle,
+    state: &EncryptedDatabaseState,
     key_b64: String,
 ) -> Result<DatabaseEncryptionStatus, String> {
     if let Some(status) = state.status() {
@@ -520,10 +520,10 @@ pub async fn encrypted_database_open(
     }
 
     let key = decode_key(&key_b64)?;
-    let path = database_path(&app)?;
+    let path = database_path(app)?;
     let migrated_from_plaintext = looks_like_plaintext_sqlite(&path)?;
     let migration_backup = if migrated_from_plaintext {
-        migrate_plaintext_database(&app, &path, &key).await?
+        migrate_plaintext_database(app, &path, &key).await?
     } else {
         None
     };
@@ -555,7 +555,7 @@ pub async fn encrypted_database_open(
         .await
         .map_err(to_error)?;
     }
-    let status = read_status(&app, &mut connection, &key, cipher).await?;
+    let status = read_status(app, &mut connection, &key, cipher).await?;
     connection.close().await.map_err(to_error)?;
     state.set_key(key.to_vec())?;
     state.set_status(status.clone());
@@ -566,6 +566,17 @@ pub async fn encrypted_database_open(
         status.key_fingerprint
     );
     Ok(status)
+}
+
+#[tauri::command(async)]
+pub fn encrypted_database_open(
+    app: AppHandle,
+    key_b64: String,
+) -> Result<DatabaseEncryptionStatus, String> {
+    run_local_async_worker("finnacialux-database-open", move || async move {
+        let state = app.state::<EncryptedDatabaseState>();
+        encrypted_database_open_internal(&app, &state, key_b64).await
+    })
 }
 
 fn validate_sql(sql: &str) -> Result<(), String> {
@@ -708,10 +719,9 @@ pub fn encrypted_database_close(state: State<'_, EncryptedDatabaseState>) {
     state.clear();
 }
 
-#[tauri::command]
-pub async fn encrypted_database_rekey(
-    app: AppHandle,
-    state: State<'_, EncryptedDatabaseState>,
+async fn encrypted_database_rekey_internal(
+    app: &AppHandle,
+    state: &EncryptedDatabaseState,
     new_key_b64: String,
 ) -> Result<DatabaseEncryptionStatus, String> {
     let old_key = state.key_copy()?;
@@ -720,9 +730,9 @@ pub async fn encrypted_database_rekey(
         return Err("A nova chave precisa ser diferente da chave atual.".to_string());
     }
 
-    let path = database_path(&app)?;
+    let path = database_path(app)?;
     let timestamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
-    let safety_copy = backups_dir(&app)?.join(format!("pre-key-rotation-{timestamp}.sqlcipher"));
+    let safety_copy = backups_dir(app)?.join(format!("pre-key-rotation-{timestamp}.sqlcipher"));
     let mut connection = encrypted_options(&path, &old_key, false)
         .connect()
         .await
@@ -771,7 +781,7 @@ pub async fn encrypted_database_rekey(
     .execute(&mut verification)
     .await
     .map_err(to_error)?;
-    let status = read_status(&app, &mut verification, &new_key, cipher).await?;
+    let status = read_status(app, &mut verification, &new_key, cipher).await?;
     verification.close().await.map_err(to_error)?;
     state.set_key(new_key.to_vec())?;
     state.set_status(status.clone());
@@ -781,6 +791,17 @@ pub async fn encrypted_database_rekey(
         safety_copy.to_string_lossy()
     );
     Ok(status)
+}
+
+#[tauri::command(async)]
+pub fn encrypted_database_rekey(
+    app: AppHandle,
+    new_key_b64: String,
+) -> Result<DatabaseEncryptionStatus, String> {
+    run_local_async_worker("finnacialux-database-rekey", move || async move {
+        let state = app.state::<EncryptedDatabaseState>();
+        encrypted_database_rekey_internal(&app, &state, new_key_b64).await
+    })
 }
 
 pub async fn export_plaintext_snapshot(
