@@ -43,10 +43,13 @@ export const initialNotificationSettings: NotificationSettings = {
 };
 
 export const initialSecuritySettings: SecuritySettings = {
-  twoFactorEnabled: false,
-  loginAlerts: true,
-  sessionTimeoutMinutes: 60,
-  requirePasswordForExports: false,
+  pinEnabled: false,
+  autoLockMinutes: 15,
+  lockOnMinimize: true,
+  requirePasswordForExports: true,
+  requirePasswordForRestore: true,
+  encryptedBackupsDefault: true,
+  vaultInitialized: false,
 };
 
 export const initialActiveSessions: ActiveSession[] = [];
@@ -57,6 +60,7 @@ export const initialBackupSettings: BackupSettings = {
   frequency: "weekly",
   retentionCount: 6,
   includeAttachments: false,
+  encryptionMode: "device",
   lastAutomaticAt: null,
 };
 

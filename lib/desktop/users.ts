@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 import { getDesktopDatabase } from "@/lib/desktop/database";
+import type { BindValue } from "@/lib/desktop/database";
 import { readLocalSessionUserId } from "@/lib/desktop/session";
 import type { UpdateUserPreferencesInput, UserPreferencesResponse } from "@/lib/api/users";
 
@@ -98,10 +99,13 @@ export const desktopUsers = {
 
   async updatePreferences(input: UpdateUserPreferencesInput): Promise<UserPreferencesResponse> {
     const database = await getDesktopDatabase();
-    const entries = Object.entries(input) as Array<[keyof UpdateUserPreferencesInput, unknown]>;
+    const entries = (Object.entries(input) as Array<[keyof UpdateUserPreferencesInput, unknown]>)
+      .filter(([, value]) => value !== undefined);
     if (entries.length) {
       const assignments = entries.map(([key], index) => `${FIELD_MAP[key]} = $${index + 1}`);
-      const values = entries.map(([, value]) => typeof value === "boolean" ? Number(value) : value);
+      const values: BindValue[] = entries.map(([, value]) =>
+        typeof value === "boolean" ? Number(value) : (value as BindValue),
+      );
       values.push(new Date().toISOString(), requireUserId());
       await database.execute(
         `UPDATE user_preferences

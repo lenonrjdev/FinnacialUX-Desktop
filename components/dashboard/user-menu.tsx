@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LogOutIcon, SettingsIcon, ShieldIcon, UsersIcon } from "@/components/shared/icons";
+import { LockIcon, LogOutIcon, SettingsIcon, ShieldIcon, UsersIcon } from "@/components/shared/icons";
 import { useAuth } from "@/components/providers/auth-provider";
 import { dashboardContent } from "@/content/dashboard";
 import { integrationContent } from "@/content/integracao";
@@ -39,6 +39,7 @@ export function UserMenu({ user }: { user: SessionUser }) {
           <nav>
             <Link href="/acessos" onClick={() => setOpen(false)}><UsersIcon /> {dashboardContent.accountMenu.manageAccess}</Link>
             <Link href="/configuracoes" onClick={() => setOpen(false)}><SettingsIcon /> {dashboardContent.accountMenu.settings}</Link>
+            <button type="button" onClick={() => { setOpen(false); window.dispatchEvent(new Event("finnacialux-lock-request")); }}><LockIcon /> Bloquear aplicativo</button>
             <button type="button" onClick={handleLogout} disabled={leaving}><LogOutIcon /> {leaving ? integrationContent.accountMenu.leaving : dashboardContent.accountMenu.logout}</button>
           </nav>
         </div>

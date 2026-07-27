@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { error as logError, info as logInfo, warn as logWarn } from "@tauri-apps/plugin-log";
-import { closeDesktopDatabase, isDesktopRuntime } from "@/lib/desktop/database";
+import { closeDesktopDatabase, getDesktopDatabase, isDesktopRuntime } from "@/lib/desktop/database";
 import { clearLocalSession } from "@/lib/desktop/session";
 import type {
   AutomaticBackupResult,
+  BackupEncryptionMode,
+  BackupHeader,
   BackupPreview,
   DiagnosticReport,
   IntegrityReport,
@@ -71,10 +73,19 @@ export async function chooseBackupSource(): Promise<string | null> {
   return typeof selected === "string" ? selected : null;
 }
 
-export async function createManualBackup(destination: string): Promise<NativeBackupRecord> {
+export async function createManualBackup(
+  destination: string,
+  encryptionMode: BackupEncryptionMode,
+  credential?: string,
+): Promise<NativeBackupRecord> {
   try {
-    const result = await invoke<{ record: NativeBackupRecord; message: string }>("create_manual_backup", { destination });
-    await safeLog("info", "backup.manual.created", `id=${result.record.id}`);
+    await getDesktopDatabase();
+    const result = await invoke<{ record: NativeBackupRecord; message: string }>("create_manual_backup", {
+      destination,
+      encryptionMode,
+      credential: credential ?? null,
+    });
+    await safeLog("info", "backup.manual.created", `id=${result.record.id} mode=${encryptionMode}`);
     return result.record;
   } catch (caught) {
     const problem = normalizeError(caught);
@@ -83,9 +94,12 @@ export async function createManualBackup(destination: string): Promise<NativeBac
   }
 }
 
-export async function runAutomaticBackup(): Promise<AutomaticBackupResult> {
+export async function runAutomaticBackup(credential?: string): Promise<AutomaticBackupResult> {
   try {
-    const result = await invoke<AutomaticBackupResult>("run_automatic_backup");
+    await getDesktopDatabase();
+    const result = await invoke<AutomaticBackupResult>("run_automatic_backup", {
+      credential: credential ?? null,
+    });
     if (result.created) await safeLog("info", "backup.automatic.created");
     return result;
   } catch (caught) {
@@ -95,23 +109,38 @@ export async function runAutomaticBackup(): Promise<AutomaticBackupResult> {
   }
 }
 
-export function listNativeBackups(): Promise<NativeBackupRecord[]> {
+export async function listNativeBackups(): Promise<NativeBackupRecord[]> {
+  await getDesktopDatabase();
   return invoke<NativeBackupRecord[]>("list_backups");
 }
 
 export async function removeNativeBackup(backupId: string, deleteFile: boolean): Promise<void> {
+  await getDesktopDatabase();
   await invoke("remove_backup_record", { backupId, deleteFile });
   await safeLog("info", "backup.record.removed", `deleteFile=${deleteFile}`);
 }
 
-export function previewNativeBackup(source: string): Promise<BackupPreview> {
-  return invoke<BackupPreview>("preview_backup", { source });
+export function inspectNativeBackup(source: string): Promise<BackupHeader> {
+  return invoke<BackupHeader>("inspect_backup_header", { source });
 }
 
-export async function restoreNativeBackup(source: string): Promise<RestoreOperationResult> {
+export function previewNativeBackup(source: string, credential?: string): Promise<BackupPreview> {
+  return invoke<BackupPreview>("preview_backup", { source, credential: credential ?? null });
+}
+
+export async function restoreNativeBackup(
+  source: string,
+  credential?: string,
+  safetyCredential?: string,
+): Promise<RestoreOperationResult> {
   try {
+    await getDesktopDatabase();
+    const result = await invoke<RestoreOperationResult>("restore_backup", {
+      source,
+      credential: credential ?? null,
+      safetyCredential: safetyCredential ?? null,
+    });
     await closeDesktopDatabase();
-    const result = await invoke<RestoreOperationResult>("restore_backup", { source });
     clearLocalSession();
     setSafeModeEnabled(false);
     await safeLog("warn", "backup.restored");
@@ -123,19 +152,23 @@ export async function restoreNativeBackup(source: string): Promise<RestoreOperat
   }
 }
 
-export function runDatabaseIntegrityCheck(): Promise<IntegrityReport> {
+export async function runDatabaseIntegrityCheck(): Promise<IntegrityReport> {
+  await getDesktopDatabase();
   return invoke<IntegrityReport>("run_integrity_check");
 }
 
-export function getDesktopDiagnostics(): Promise<DiagnosticReport> {
+export async function getDesktopDiagnostics(): Promise<DiagnosticReport> {
+  await getDesktopDatabase();
   return invoke<DiagnosticReport>("get_diagnostics", { safeMode: isSafeModeEnabled() });
 }
 
-export function getNativeBackupPreferences(): Promise<NativeBackupPreferences> {
+export async function getNativeBackupPreferences(): Promise<NativeBackupPreferences> {
+  await getDesktopDatabase();
   return invoke<NativeBackupPreferences>("get_backup_preferences");
 }
 
-export function saveNativeBackupPreferences(preferences: NativeBackupPreferences): Promise<NativeBackupPreferences> {
+export async function saveNativeBackupPreferences(preferences: NativeBackupPreferences): Promise<NativeBackupPreferences> {
+  await getDesktopDatabase();
   return invoke<NativeBackupPreferences>("save_backup_preferences", { preferences });
 }
 
@@ -149,6 +182,7 @@ export async function chooseDiagnosticDestination(): Promise<string | null> {
 }
 
 export async function exportDiagnosticPackage(destination: string): Promise<string> {
+  await getDesktopDatabase();
   const path = await invoke<string>("export_diagnostic_package", {
     destination,
     safeMode: isSafeModeEnabled(),

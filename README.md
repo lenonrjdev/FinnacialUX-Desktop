@@ -1,8 +1,8 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLite. A versão `0.2.0` inclui proteção de dados, backups
-nativos, restauração segura, diagnóstico e recuperação após encerramento inesperado.
+React, TypeScript e SQLCipher. A versão `0.4.0` inclui criptografia integral do
+banco local, Stronghold, Argon2id, PIN, backups criptografados e diagnóstico.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -18,7 +18,7 @@ FinnacialUX Desktop/
 ├── data/
 ├── lib/
 │   ├── api/       # contratos preservados do Core
-│   └── desktop/   # implementações locais SQLite
+│   └── desktop/   # adaptadores locais para a ponte SQLCipher
 ├── types/
 ├── src-tauri/
 │   ├── capabilities/
@@ -39,7 +39,9 @@ FinnacialUX Desktop/
 - Node.js 22 LTS;
 - Rust com toolchain MSVC;
 - Microsoft C++ Build Tools com **Desktop development with C++**;
-- Microsoft Edge WebView2.
+- Microsoft Edge WebView2;
+- Strawberry Perl para compilar o OpenSSL incorporado ao SQLCipher;
+- NASM recomendado para otimizações nativas.
 
 ## Configurar
 
@@ -79,10 +81,12 @@ O Desktop não possui usuário de demonstração. Na primeira abertura:
 3. o aplicativo criará um espaço financeiro pessoal vazio;
 4. todos os registros seguintes serão salvos no SQLite deste computador.
 
-## Persistência e proteção de dados
+## Persistência, criptografia e proteção de dados
 
 Os dados permanecem no computador depois de fechar o aplicativo ou reiniciar o
-Windows. Não apague a pasta de dados do aplicativo sem antes criar um backup.
+Windows. O arquivo principal é criptografado integralmente com SQLCipher e sua
+chave fica protegida pelo Stronghold. Não apague a pasta de dados nem o cofre do
+aplicativo sem antes criar um backup portátil com senha.
 
 Em **Configurações → Backups**, é possível criar arquivos `.fuxbackup`, ativar
 backups automáticos e restaurar uma cópia validada. Em **Configurações →
@@ -93,6 +97,10 @@ Leia também:
 
 - `FASE_1_DESKTOP.md`;
 - `FASE_2_DESKTOP_PROTECAO_DADOS.md`;
+- `FASE_3_DESKTOP_SEGURANCA_LOCAL.md`;
+- `FASE_4_DESKTOP_BANCO_SQLCIPHER.md`;
 - `docs/OPERACAO_BACKUP_RECUPERACAO.md`;
+- `docs/SEGURANCA_LOCAL.md`;
+- `docs/CRIPTOGRAFIA_BANCO_SQLCIPHER.md`;
 - `docs/ARQUITETURA_DESKTOP.md`;
 - `docs/CORE_REUSE_MANIFEST.md`.

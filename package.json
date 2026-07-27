@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestão financeira pessoal offline com Tauri 2 e SQLite.",
+  "description": "FinnacialUX Desktop — gestão financeira pessoal offline com Tauri 2, SQLCipher e SQLite criptografado.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,12 +17,12 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-sql": "^2.0.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tauri-apps/plugin-log": "^2.0.0"
+    "@tauri-apps/plugin-log": "^2.0.0",
+    "@tauri-apps/plugin-stronghold": "^2.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

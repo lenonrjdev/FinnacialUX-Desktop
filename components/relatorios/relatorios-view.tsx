@@ -15,6 +15,7 @@ import { ReportsHeading } from "@/components/relatorios/reports-heading";
 import { ReportsSummary } from "@/components/relatorios/reports-summary";
 import { ReportsToolbar } from "@/components/relatorios/reports-toolbar";
 import { CheckIcon } from "@/components/shared/icons";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { useFinanceDataState } from "@/components/providers/finance-data-provider";
 import { reportsContent } from "@/content/relatorios";
 import { initialSubscriptions } from "@/data/assinaturas";
@@ -78,6 +79,7 @@ function downloadCsv(filename: string, rows: string[][]) {
 }
 
 export default function RelatoriosView() {
+  const { confirmSensitiveAction } = useDesktopSecurity();
   const [view, setView] = useState<ReportView>("reports");
   const [period, setPeriod] = useState<ReportPeriod>("last-6-months");
   const [scenario, setScenario] = useState<ProjectionScenario>("realistic");
@@ -328,7 +330,8 @@ export default function RelatoriosView() {
     window.setTimeout(() => setFeedback(""), 2400);
   }
 
-  function exportReport() {
+  async function exportReport() {
+    if (!(await confirmSensitiveAction("export"))) return;
     if (view === "projection") {
       downloadCsv("projecao-financeira-12-meses.csv", [
         ["Mês", "Entradas", "Contas essenciais", "Assinaturas", "Dívidas", "Parcelamentos", "Metas", "Gastos variáveis", "Saídas totais", "Resultado", "Saldo projetado"],
@@ -360,9 +363,15 @@ export default function RelatoriosView() {
     showFeedback(reportsContent.feedback.exported);
   }
 
+
+  async function printReport() {
+    if (!(await confirmSensitiveAction("export"))) return;
+    window.print();
+  }
+
   return (
     <div className="financial-management-page reports-page">
-      <ReportsHeading onExport={exportReport} onPrint={() => window.print()} />
+      <ReportsHeading onExport={() => void exportReport()} onPrint={() => void printReport()} />
       <ReportsToolbar
         view={view}
         period={period}

@@ -5,6 +5,8 @@ import { integrationContent } from "@/content/integracao";
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { workspacesApi } from "@/lib/api/workspaces";
+import { closeDesktopDatabase } from "@/lib/desktop/database";
+import { unloadSecurityVault } from "@/lib/desktop/stronghold";
 import type { FinancialWorkspace } from "@/types/acessos";
 import type { AuthenticatedProfile } from "@/types/api";
 
@@ -60,6 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     try {
       await authApi.logout();
+      await closeDesktopDatabase().catch(() => undefined);
+      await unloadSecurityVault().catch(() => undefined);
     } finally {
       setUser(null);
       window.location.replace("/login/");

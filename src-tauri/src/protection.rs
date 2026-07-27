@@ -1,8 +1,16 @@
+use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
+use argon2::Argon2;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::{DateTime, Duration, Utc};
 use fs2::available_space;
 use serde::{Deserialize, Serialize};
+use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
-use sqlx::{sqlite::SqliteConnectOptions, Connection, Row, SqliteConnection};
+use sqlx::{Connection, Row, SqliteConnection};
+use crate::encrypted_database::{
+    connect_app_database, connect_plaintext_path, export_plaintext_snapshot,
+    replace_from_plaintext_snapshot, DatabaseEncryptionStatus, EncryptedDatabaseState,
+};
 use std::{
     fs::{self, File},
     io::{Read, Write},
@@ -17,8 +25,9 @@ use uuid::Uuid;
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const BACKUP_EXTENSION: &str = "fuxbackup";
 const DIAGNOSTIC_EXTENSION: &str = "fuxdiag";
-const BACKUP_MAGIC: &[u8] = b"FUXBACKUP2\n";
-const CURRENT_SCHEMA_VERSION: i64 = 2;
+const BACKUP_MAGIC_V2: &[u8] = b"FUXBACKUP2\n";
+const BACKUP_MAGIC_V3: &[u8] = b"FUXBACKUP3\n";
+const CURRENT_SCHEMA_VERSION: i64 = 4;
 const SESSION_MARKER_FILE: &str = "session-active.marker";
 
 #[derive(Default)]
@@ -55,6 +64,16 @@ pub struct BackupManifest {
     database_size_bytes: u64,
     database_sha256: String,
     modules_count: i64,
+    #[serde(default = "default_encryption_mode")]
+    encryption_mode: String,
+    #[serde(default)]
+    encryption_salt_b64: Option<String>,
+    #[serde(default)]
+    encryption_nonce_b64: Option<String>,
+    #[serde(default)]
+    payload_size_bytes: u64,
+    #[serde(default)]
+    payload_sha256: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -72,7 +91,18 @@ pub struct BackupRecord {
     checksum_sha256: Option<String>,
     app_version: String,
     schema_version: i64,
+    encryption_mode: String,
     error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupHeader {
+    file_path: String,
+    file_name: String,
+    package_size_bytes: u64,
+    manifest: BackupManifest,
+    requires_credential: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -133,6 +163,13 @@ pub struct DiagnosticReport {
     database_path: String,
     database_exists: bool,
     database_size_bytes: u64,
+    database_encrypted: bool,
+    database_cipher_version: String,
+    database_key_fingerprint: String,
+    database_encrypted_at: Option<String>,
+    database_last_key_rotation_at: Option<String>,
+    database_migrated_from_plaintext: bool,
+    database_migration_backup_path: Option<String>,
     backups_directory: String,
     logs_directory: String,
     available_disk_bytes: u64,
@@ -152,6 +189,7 @@ pub struct BackupPreferences {
     frequency: String,
     retention_count: i64,
     include_attachments: bool,
+    encryption_mode: String,
     last_automatic_at: Option<String>,
 }
 
@@ -168,6 +206,10 @@ pub struct AutomaticBackupResult {
 pub struct RecoveryStatus {
     previous_unclean_shutdown: bool,
     marker_path: String,
+}
+
+fn default_encryption_mode() -> String {
+    "none".to_string()
 }
 
 fn to_error<T: std::fmt::Display>(error: T) -> String {
@@ -200,19 +242,117 @@ fn session_marker_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_config_dir(app)?.join(SESSION_MARKER_FILE))
 }
 
-async fn connect_database(path: &Path) -> Result<SqliteConnection, String> {
-    let options = SqliteConnectOptions::new()
-        .filename(path)
-        .create_if_missing(false)
-        .foreign_keys(true);
-    SqliteConnection::connect_with(&options)
-        .await
-        .map_err(to_error)
+async fn connect_database(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+) -> Result<SqliteConnection, String> {
+    connect_app_database(app, database).await
+}
+
+async fn connect_snapshot(path: &Path) -> Result<SqliteConnection, String> {
+    connect_plaintext_path(path, false).await
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn derive_password_key(password: &str, salt: &[u8]) -> Result<[u8; 32], String> {
+    if password.len() < 8 {
+        return Err("A senha do backup precisa ter pelo menos 8 caracteres.".to_string());
+    }
+    let mut key = [0_u8; 32];
+    Argon2::default()
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(to_error)?;
+    Ok(key)
+}
+
+fn decode_device_key(value: &str) -> Result<[u8; 32], String> {
+    let decoded = BASE64.decode(value).map_err(to_error)?;
+    decoded
+        .try_into()
+        .map_err(|_| "A chave local de backup é inválida.".to_string())
+}
+
+fn encrypt_backup_payload(
+    mode: &str,
+    credential: Option<&str>,
+    plaintext: &[u8],
+) -> Result<(Vec<u8>, Option<String>, Option<String>), String> {
+    if mode == "none" {
+        return Ok((plaintext.to_vec(), None, None));
+    }
+
+    let mut salt = [0_u8; 16];
+    let key = if mode == "password" {
+        OsRng.fill_bytes(&mut salt);
+        derive_password_key(
+            credential.ok_or_else(|| "Informe a senha para criptografar o backup.".to_string())?,
+            &salt,
+        )?
+    } else if mode == "device" {
+        decode_device_key(
+            credential.ok_or_else(|| "O cofre local precisa estar desbloqueado.".to_string())?,
+        )?
+    } else {
+        return Err("Modo de criptografia de backup inválido.".to_string());
+    };
+
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(to_error)?;
+    let mut nonce_bytes = [0_u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let encrypted = cipher
+        .encrypt(Nonce::from_slice(&nonce_bytes), plaintext)
+        .map_err(|_| "Não foi possível criptografar o backup.".to_string())?;
+    Ok((
+        encrypted,
+        (mode == "password").then(|| BASE64.encode(salt)),
+        Some(BASE64.encode(nonce_bytes)),
+    ))
+}
+
+fn decrypt_backup_payload(
+    manifest: &BackupManifest,
+    credential: Option<&str>,
+    payload: &[u8],
+) -> Result<Vec<u8>, String> {
+    if manifest.encryption_mode == "none" {
+        return Ok(payload.to_vec());
+    }
+
+    let nonce = manifest
+        .encryption_nonce_b64
+        .as_deref()
+        .ok_or_else(|| "O backup criptografado não possui nonce.".to_string())
+        .and_then(|value| BASE64.decode(value).map_err(to_error))?;
+    if nonce.len() != 12 {
+        return Err("O nonce do backup é inválido.".to_string());
+    }
+
+    let key = if manifest.encryption_mode == "password" {
+        let salt = manifest
+            .encryption_salt_b64
+            .as_deref()
+            .ok_or_else(|| "O backup não possui salt de criptografia.".to_string())
+            .and_then(|value| BASE64.decode(value).map_err(to_error))?;
+        derive_password_key(
+            credential.ok_or_else(|| "Este backup exige a senha definida na criação.".to_string())?,
+            &salt,
+        )?
+    } else if manifest.encryption_mode == "device" {
+        decode_device_key(
+            credential.ok_or_else(|| "Este backup está protegido pelo cofre do computador de origem.".to_string())?,
+        )?
+    } else {
+        return Err("O backup usa um modo de criptografia desconhecido.".to_string());
+    };
+
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(to_error)?;
+    cipher
+        .decrypt(Nonce::from_slice(&nonce), payload)
+        .map_err(|_| "A senha ou a chave local não conseguiu abrir este backup.".to_string())
 }
 
 fn ensure_extension(mut path: PathBuf, extension: &str) -> PathBuf {
@@ -228,7 +368,7 @@ fn ensure_extension(mut path: PathBuf, extension: &str) -> PathBuf {
 }
 
 async fn modules_count(path: &Path) -> Result<i64, String> {
-    let mut connection = connect_database(path).await?;
+    let mut connection = connect_snapshot(path).await?;
     let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM finance_documents")
         .fetch_one(&mut connection)
         .await
@@ -237,38 +377,17 @@ async fn modules_count(path: &Path) -> Result<i64, String> {
     Ok(count)
 }
 
-async fn create_consistent_database_copy(source: &Path, destination: &Path) -> Result<(), String> {
-    if destination.exists() {
-        fs::remove_file(destination).map_err(to_error)?;
-    }
-
-    let mut connection = connect_database(source).await?;
-    sqlx::query("PRAGMA wal_checkpoint(FULL)")
-        .execute(&mut connection)
-        .await
-        .map_err(to_error)?;
-
-    let escaped_destination = destination
-        .to_string_lossy()
-        .replace('\\', "/")
-        .replace('\'', "''");
-    let statement = format!("VACUUM INTO '{escaped_destination}'");
-    sqlx::query(&statement)
-        .execute(&mut connection)
-        .await
-        .map_err(to_error)?;
-    connection.close().await.map_err(to_error)?;
-    Ok(())
+async fn create_consistent_database_copy(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+    destination: &Path,
+) -> Result<(), String> {
+    export_plaintext_snapshot(app, database, destination).await
 }
 
-async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
-    if !path.exists() {
-        return Err("O arquivo de banco não foi encontrado.".to_string());
-    }
-
-    let mut connection = connect_database(path).await?;
+async fn validate_connection(connection: &mut SqliteConnection) -> Result<IntegrityReport, String> {
     let integrity_rows = sqlx::query("PRAGMA integrity_check")
-        .fetch_all(&mut connection)
+        .fetch_all(&mut *connection)
         .await
         .map_err(to_error)?;
     let integrity_messages = integrity_rows
@@ -277,11 +396,18 @@ async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
         .collect::<Vec<_>>();
 
     let foreign_key_rows = sqlx::query("PRAGMA foreign_key_check")
-        .fetch_all(&mut connection)
+        .fetch_all(&mut *connection)
         .await
         .map_err(to_error)?;
 
-    let required_tables = [
+    let version = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(MAX(version), 1) FROM app_schema_history",
+    )
+    .fetch_one(&mut *connection)
+    .await
+    .unwrap_or(1);
+
+    let mut required_tables = vec![
         "users",
         "workspaces",
         "user_preferences",
@@ -290,28 +416,26 @@ async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
         "backup_history",
         "backup_preferences",
     ];
+    if version >= 3 {
+        required_tables.extend(["local_security_preferences", "security_events"]);
+    }
+    if version >= 4 {
+        required_tables.push("database_security_state");
+    }
+
     let mut required_tables_present = true;
     for table in required_tables {
         let found = sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $1",
         )
         .bind(table)
-        .fetch_one(&mut connection)
+        .fetch_one(&mut *connection)
         .await
         .map_err(to_error)?;
         if found == 0 {
             required_tables_present = false;
         }
     }
-
-    let version = sqlx::query_scalar::<_, i64>(
-        "SELECT COALESCE(MAX(version), 1) FROM app_schema_history",
-    )
-    .fetch_one(&mut connection)
-    .await
-    .unwrap_or(1);
-
-    connection.close().await.map_err(to_error)?;
 
     let integrity_ok = integrity_messages.len() == 1
         && integrity_messages[0].eq_ignore_ascii_case("ok");
@@ -325,10 +449,30 @@ async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
     })
 }
 
+async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
+    if !path.exists() {
+        return Err("O arquivo de banco não foi encontrado.".to_string());
+    }
+    let mut connection = connect_snapshot(path).await?;
+    let report = validate_connection(&mut connection).await?;
+    connection.close().await.map_err(to_error)?;
+    Ok(report)
+}
+
+async fn validate_current_database(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+) -> Result<IntegrityReport, String> {
+    let mut connection = connect_database(app, database).await?;
+    let report = validate_connection(&mut connection).await?;
+    connection.close().await.map_err(to_error)?;
+    Ok(report)
+}
+
 fn write_backup_package(
     destination: &Path,
     manifest: &BackupManifest,
-    database_bytes: &[u8],
+    payload: &[u8],
 ) -> Result<(), String> {
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent).map_err(to_error)?;
@@ -337,10 +481,10 @@ fn write_backup_package(
     let manifest_length = manifest_bytes.len() as u64;
     let temporary_path = destination.with_extension("fuxbackup.tmp");
     let mut file = File::create(&temporary_path).map_err(to_error)?;
-    file.write_all(BACKUP_MAGIC).map_err(to_error)?;
+    file.write_all(BACKUP_MAGIC_V3).map_err(to_error)?;
     file.write_all(&manifest_length.to_le_bytes()).map_err(to_error)?;
     file.write_all(&manifest_bytes).map_err(to_error)?;
-    file.write_all(database_bytes).map_err(to_error)?;
+    file.write_all(payload).map_err(to_error)?;
     file.sync_all().map_err(to_error)?;
     if destination.exists() {
         fs::remove_file(destination).map_err(to_error)?;
@@ -349,11 +493,13 @@ fn write_backup_package(
     Ok(())
 }
 
-fn read_backup_package(path: &Path) -> Result<(BackupManifest, Vec<u8>), String> {
+fn read_backup_header_internal(path: &Path) -> Result<(BackupManifest, Vec<u8>), String> {
     let mut file = File::open(path).map_err(to_error)?;
-    let mut magic = vec![0_u8; BACKUP_MAGIC.len()];
+    let mut magic = vec![0_u8; BACKUP_MAGIC_V3.len()];
     file.read_exact(&mut magic).map_err(to_error)?;
-    if magic != BACKUP_MAGIC {
+    let is_v2 = magic == BACKUP_MAGIC_V2;
+    let is_v3 = magic == BACKUP_MAGIC_V3;
+    if !is_v2 && !is_v3 {
         return Err("Este arquivo não é um backup válido do FinnacialUX Desktop.".to_string());
     }
 
@@ -366,34 +512,52 @@ fn read_backup_package(path: &Path) -> Result<(BackupManifest, Vec<u8>), String>
 
     let mut manifest_bytes = vec![0_u8; manifest_length as usize];
     file.read_exact(&mut manifest_bytes).map_err(to_error)?;
-    let manifest: BackupManifest = serde_json::from_slice(&manifest_bytes).map_err(to_error)?;
-    let mut database_bytes = Vec::new();
-    file.read_to_end(&mut database_bytes).map_err(to_error)?;
+    let mut manifest: BackupManifest = serde_json::from_slice(&manifest_bytes).map_err(to_error)?;
+    let mut payload = Vec::new();
+    file.read_to_end(&mut payload).map_err(to_error)?;
 
     if manifest.format != "finnacialux-desktop-backup"
-        || manifest.format_version != 2
         || manifest.app_identifier != "com.ateliux.finnacialux.desktop"
+        || (manifest.format_version != 2 && manifest.format_version != 3)
     {
         return Err("O backup pertence a outro aplicativo ou formato.".to_string());
     }
-    if database_bytes.len() as u64 != manifest.database_size_bytes {
-        return Err("O tamanho interno do backup não corresponde ao manifesto.".to_string());
+    if is_v2 {
+        manifest.encryption_mode = "none".to_string();
+        manifest.payload_size_bytes = payload.len() as u64;
+        manifest.payload_sha256 = sha256_hex(&payload);
     }
-    let checksum = sha256_hex(&database_bytes);
-    if checksum != manifest.database_sha256 {
-        return Err("A assinatura de integridade do backup não corresponde ao conteúdo.".to_string());
+    if manifest.payload_size_bytes != 0 && payload.len() as u64 != manifest.payload_size_bytes {
+        return Err("O tamanho do conteúdo protegido não corresponde ao manifesto.".to_string());
+    }
+    if !manifest.payload_sha256.is_empty() && sha256_hex(&payload) != manifest.payload_sha256 {
+        return Err("A assinatura do conteúdo protegido não corresponde ao arquivo.".to_string());
+    }
+    Ok((manifest, payload))
+}
+
+fn read_backup_package(
+    path: &Path,
+    credential: Option<&str>,
+) -> Result<(BackupManifest, Vec<u8>), String> {
+    let (manifest, payload) = read_backup_header_internal(path)?;
+    let database_bytes = decrypt_backup_payload(&manifest, credential, &payload)?;
+    if database_bytes.len() as u64 != manifest.database_size_bytes {
+        return Err("O tamanho interno do banco não corresponde ao manifesto.".to_string());
+    }
+    if sha256_hex(&database_bytes) != manifest.database_sha256 {
+        return Err("A assinatura de integridade do banco não corresponde ao conteúdo.".to_string());
     }
     Ok((manifest, database_bytes))
 }
 
-async fn insert_backup_history(app: &AppHandle, record: &BackupRecord) -> Result<(), String> {
-    let path = database_path(app)?;
-    let mut connection = connect_database(&path).await?;
+async fn insert_backup_history(app: &AppHandle, database: &EncryptedDatabaseState, record: &BackupRecord) -> Result<(), String> {
+    let mut connection = connect_database(app, database).await?;
     sqlx::query(
         r#"INSERT INTO backup_history (
           id, file_name, file_path, created_at, size_bytes, modules_count, kind,
-          status, integrity_status, checksum_sha256, app_version, schema_version, error_message
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          status, integrity_status, checksum_sha256, app_version, schema_version, encryption_mode, error_message
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT(id) DO UPDATE SET
           file_name = excluded.file_name,
           file_path = excluded.file_path,
@@ -406,6 +570,7 @@ async fn insert_backup_history(app: &AppHandle, record: &BackupRecord) -> Result
           checksum_sha256 = excluded.checksum_sha256,
           app_version = excluded.app_version,
           schema_version = excluded.schema_version,
+          encryption_mode = excluded.encryption_mode,
           error_message = excluded.error_message"#,
     )
     .bind(&record.id)
@@ -420,6 +585,7 @@ async fn insert_backup_history(app: &AppHandle, record: &BackupRecord) -> Result
     .bind(&record.checksum_sha256)
     .bind(&record.app_version)
     .bind(record.schema_version)
+    .bind(&record.encryption_mode)
     .bind(&record.error_message)
     .execute(&mut connection)
     .await
@@ -430,8 +596,11 @@ async fn insert_backup_history(app: &AppHandle, record: &BackupRecord) -> Result
 
 async fn create_backup_internal(
     app: &AppHandle,
+    database: &EncryptedDatabaseState,
     destination: PathBuf,
     kind: &str,
+    encryption_mode: &str,
+    credential: Option<&str>,
 ) -> Result<BackupRecord, String> {
     let source = database_path(app)?;
     if !source.exists() {
@@ -441,7 +610,7 @@ async fn create_backup_internal(
     let destination = ensure_extension(destination, BACKUP_EXTENSION);
     let temporary_directory = TempDir::new().map_err(to_error)?;
     let snapshot_path = temporary_directory.path().join(DATABASE_FILE_NAME);
-    create_consistent_database_copy(&source, &snapshot_path).await?;
+    create_consistent_database_copy(app, database, &snapshot_path).await?;
     let integrity = validate_database(&snapshot_path).await?;
     if !integrity.ok {
         return Err("A cópia foi criada, mas não passou na verificação de integridade.".to_string());
@@ -449,12 +618,15 @@ async fn create_backup_internal(
 
     let database_bytes = fs::read(&snapshot_path).map_err(to_error)?;
     let checksum = sha256_hex(&database_bytes);
+    let (payload, encryption_salt_b64, encryption_nonce_b64) =
+        encrypt_backup_payload(encryption_mode, credential, &database_bytes)?;
+    let payload_checksum = sha256_hex(&payload);
     let created_at = Utc::now().to_rfc3339();
     let app_version = app.package_info().version.to_string();
     let modules = modules_count(&snapshot_path).await?;
     let manifest = BackupManifest {
         format: "finnacialux-desktop-backup".to_string(),
-        format_version: 2,
+        format_version: 3,
         app_identifier: "com.ateliux.finnacialux.desktop".to_string(),
         app_version: app_version.clone(),
         schema_version: integrity.schema_version,
@@ -464,8 +636,13 @@ async fn create_backup_internal(
         database_size_bytes: database_bytes.len() as u64,
         database_sha256: checksum.clone(),
         modules_count: modules,
+        encryption_mode: encryption_mode.to_string(),
+        encryption_salt_b64,
+        encryption_nonce_b64,
+        payload_size_bytes: payload.len() as u64,
+        payload_sha256: payload_checksum,
     };
-    write_backup_package(&destination, &manifest, &database_bytes)?;
+    write_backup_package(&destination, &manifest, &payload)?;
     let package_size = fs::metadata(&destination).map_err(to_error)?.len() as i64;
     let record = BackupRecord {
         id: Uuid::new_v4().to_string(),
@@ -484,17 +661,17 @@ async fn create_backup_internal(
         checksum_sha256: Some(checksum),
         app_version,
         schema_version: integrity.schema_version,
+        encryption_mode: encryption_mode.to_string(),
         error_message: None,
     };
-    insert_backup_history(app, &record).await?;
+    insert_backup_history(app, database, &record).await?;
     log::info!("backup_created kind={} id={}", record.kind, record.id);
     Ok(record)
 }
 
-async fn remove_old_automatic_backups(app: &AppHandle, retention: i64) -> Result<(), String> {
-    let path = database_path(app)?;
+async fn remove_old_automatic_backups(app: &AppHandle, database: &EncryptedDatabaseState, retention: i64) -> Result<(), String> {
     let automatic_directory = backups_dir(app)?;
-    let mut connection = connect_database(&path).await?;
+    let mut connection = connect_database(app, database).await?;
     let rows = sqlx::query(
         "SELECT id, file_path FROM backup_history WHERE kind = 'automatic' ORDER BY created_at DESC",
     )
@@ -519,11 +696,10 @@ async fn remove_old_automatic_backups(app: &AppHandle, retention: i64) -> Result
     Ok(())
 }
 
-async fn load_backup_preferences_internal(app: &AppHandle) -> Result<BackupPreferences, String> {
-    let path = database_path(app)?;
-    let mut connection = connect_database(&path).await?;
+async fn load_backup_preferences_internal(app: &AppHandle, database: &EncryptedDatabaseState) -> Result<BackupPreferences, String> {
+    let mut connection = connect_database(app, database).await?;
     let row = sqlx::query(
-        "SELECT automatic_enabled, frequency, retention_count, include_attachments, last_automatic_at FROM backup_preferences WHERE id = 1",
+        "SELECT automatic_enabled, frequency, retention_count, include_attachments, encryption_mode, last_automatic_at FROM backup_preferences WHERE id = 1",
     )
     .fetch_one(&mut connection)
     .await
@@ -533,15 +709,15 @@ async fn load_backup_preferences_internal(app: &AppHandle) -> Result<BackupPrefe
         frequency: row.try_get("frequency").map_err(to_error)?,
         retention_count: row.try_get("retention_count").map_err(to_error)?,
         include_attachments: row.try_get::<i64, _>("include_attachments").map_err(to_error)? != 0,
+        encryption_mode: row.try_get("encryption_mode").unwrap_or_else(|_| "device".to_string()),
         last_automatic_at: row.try_get("last_automatic_at").map_err(to_error)?,
     };
     connection.close().await.map_err(to_error)?;
     Ok(preferences)
 }
 
-async fn update_last_automatic_at(app: &AppHandle, created_at: &str) -> Result<(), String> {
-    let path = database_path(app)?;
-    let mut connection = connect_database(&path).await?;
+async fn update_last_automatic_at(app: &AppHandle, database: &EncryptedDatabaseState, created_at: &str) -> Result<(), String> {
+    let mut connection = connect_database(app, database).await?;
     sqlx::query("UPDATE backup_preferences SET last_automatic_at = $1, updated_at = $1 WHERE id = 1")
         .bind(created_at)
         .execute(&mut connection)
@@ -573,9 +749,20 @@ fn automatic_backup_due(preferences: &BackupPreferences) -> bool {
 #[tauri::command]
 pub async fn create_manual_backup(
     app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
     destination: String,
+    encryption_mode: String,
+    credential: Option<String>,
 ) -> Result<BackupOperationResult, String> {
-    let record = create_backup_internal(&app, PathBuf::from(destination), "manual").await?;
+    let record = create_backup_internal(
+        &app,
+        &database,
+        PathBuf::from(destination),
+        "manual",
+        &encryption_mode,
+        credential.as_deref(),
+    )
+    .await?;
     Ok(BackupOperationResult {
         record,
         message: "Backup criado e verificado com sucesso.".to_string(),
@@ -583,8 +770,12 @@ pub async fn create_manual_backup(
 }
 
 #[tauri::command]
-pub async fn run_automatic_backup(app: AppHandle) -> Result<AutomaticBackupResult, String> {
-    let preferences = load_backup_preferences_internal(&app).await?;
+pub async fn run_automatic_backup(
+    app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
+    credential: Option<String>,
+) -> Result<AutomaticBackupResult, String> {
+    let preferences = load_backup_preferences_internal(&app, &database).await?;
     if !preferences.automatic_enabled {
         return Ok(AutomaticBackupResult {
             created: false,
@@ -603,9 +794,24 @@ pub async fn run_automatic_backup(app: AppHandle) -> Result<AutomaticBackupResul
     let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     let file_name = format!("FinnacialUX-automatico-{timestamp}.{BACKUP_EXTENSION}");
     let destination = backups_dir(&app)?.join(file_name);
-    let record = create_backup_internal(&app, destination, "automatic").await?;
-    update_last_automatic_at(&app, &record.created_at).await?;
-    remove_old_automatic_backups(&app, preferences.retention_count).await?;
+    if preferences.encryption_mode == "device" && credential.is_none() {
+        return Ok(AutomaticBackupResult {
+            created: false,
+            reason: "O cofre local ainda não está disponível para criptografar o backup.".to_string(),
+            record: None,
+        });
+    }
+    let record = create_backup_internal(
+        &app,
+        &database,
+        destination,
+        "automatic",
+        &preferences.encryption_mode,
+        credential.as_deref(),
+    )
+    .await?;
+    update_last_automatic_at(&app, &database, &record.created_at).await?;
+    remove_old_automatic_backups(&app, &database, preferences.retention_count).await?;
     Ok(AutomaticBackupResult {
         created: true,
         reason: "Backup automático concluído.".to_string(),
@@ -613,13 +819,14 @@ pub async fn run_automatic_backup(app: AppHandle) -> Result<AutomaticBackupResul
     })
 }
 
-#[tauri::command]
-pub async fn list_backups(app: AppHandle) -> Result<Vec<BackupRecord>, String> {
-    let path = database_path(&app)?;
-    let mut connection = connect_database(&path).await?;
+async fn list_backups_internal(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+) -> Result<Vec<BackupRecord>, String> {
+    let mut connection = connect_database(app, database).await?;
     let rows = sqlx::query(
         r#"SELECT id, file_name, file_path, created_at, size_bytes, modules_count, kind,
-                  status, integrity_status, checksum_sha256, app_version, schema_version, error_message
+                  status, integrity_status, checksum_sha256, app_version, schema_version, encryption_mode, error_message
              FROM backup_history
          ORDER BY created_at DESC"#,
     )
@@ -647,21 +854,31 @@ pub async fn list_backups(app: AppHandle) -> Result<Vec<BackupRecord>, String> {
             checksum_sha256: row.try_get("checksum_sha256").map_err(to_error)?,
             app_version: row.try_get("app_version").map_err(to_error)?,
             schema_version: row.try_get("schema_version").map_err(to_error)?,
+            encryption_mode: row.try_get("encryption_mode").unwrap_or_else(|_| "none".to_string()),
             error_message: row.try_get("error_message").map_err(to_error)?,
         });
     }
     connection.close().await.map_err(to_error)?;
     Ok(records)
+
+}
+
+#[tauri::command]
+pub async fn list_backups(
+    app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
+) -> Result<Vec<BackupRecord>, String> {
+    list_backups_internal(&app, &database).await
 }
 
 #[tauri::command]
 pub async fn remove_backup_record(
     app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
     backup_id: String,
     delete_file: bool,
 ) -> Result<(), String> {
-    let path = database_path(&app)?;
-    let mut connection = connect_database(&path).await?;
+    let mut connection = connect_database(&app, &database).await?;
     let row = sqlx::query("SELECT file_path, kind FROM backup_history WHERE id = $1")
         .bind(&backup_id)
         .fetch_optional(&mut connection)
@@ -687,8 +904,11 @@ pub async fn remove_backup_record(
     Ok(())
 }
 
-async fn extract_and_validate_backup(path: &Path) -> Result<(BackupManifest, Vec<u8>, IntegrityReport), String> {
-    let (manifest, database_bytes) = read_backup_package(path)?;
+async fn extract_and_validate_backup(
+    path: &Path,
+    credential: Option<&str>,
+) -> Result<(BackupManifest, Vec<u8>, IntegrityReport), String> {
+    let (manifest, database_bytes) = read_backup_package(path, credential)?;
     let temporary_directory = TempDir::new().map_err(to_error)?;
     let database_file = temporary_directory.path().join(DATABASE_FILE_NAME);
     fs::write(&database_file, &database_bytes).map_err(to_error)?;
@@ -697,21 +917,51 @@ async fn extract_and_validate_backup(path: &Path) -> Result<(BackupManifest, Vec
 }
 
 #[tauri::command]
+pub fn inspect_backup_header(source: String) -> Result<BackupHeader, String> {
+    let path = PathBuf::from(source);
+    let package_size = fs::metadata(&path).map_err(to_error)?.len();
+    let (manifest, _) = read_backup_header_internal(&path)?;
+    let requires_credential = manifest.encryption_mode != "none";
+    Ok(BackupHeader {
+        file_path: path.to_string_lossy().to_string(),
+        file_name: path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("backup.fuxbackup")
+            .to_string(),
+        package_size_bytes: package_size,
+        manifest,
+        requires_credential,
+    })
+}
+
+#[tauri::command]
 pub async fn preview_backup(
     _app: AppHandle,
     source: String,
+    credential: Option<String>,
 ) -> Result<BackupPreview, String> {
     let path = PathBuf::from(source);
     let package_size = fs::metadata(&path).map_err(to_error)?.len();
-    let (manifest, _, integrity) = extract_and_validate_backup(&path).await?;
-    let compatible = integrity.ok && manifest.schema_version == CURRENT_SCHEMA_VERSION;
+    let (manifest, _, integrity) =
+        extract_and_validate_backup(&path, credential.as_deref()).await?;
+    let compatible = integrity.ok && (1..=CURRENT_SCHEMA_VERSION).contains(&manifest.schema_version);
     let compatibility_message = if !integrity.ok {
         "O banco interno não passou na verificação de integridade.".to_string()
-    } else if manifest.schema_version != CURRENT_SCHEMA_VERSION {
+    } else if manifest.schema_version > CURRENT_SCHEMA_VERSION || manifest.schema_version < 1 {
         format!(
-            "Este backup usa o schema {} e esta versão exige o schema {}.",
+            "Este backup usa o schema {} e esta versão aceita schemas de 1 a {}.",
             manifest.schema_version, CURRENT_SCHEMA_VERSION
         )
+    } else if manifest.schema_version < CURRENT_SCHEMA_VERSION {
+        format!(
+            "Backup íntegro da versão {}. Ele será atualizado com segurança para o schema {} durante a restauração.",
+            manifest.schema_version, CURRENT_SCHEMA_VERSION
+        )
+    } else if manifest.encryption_mode == "password" {
+        "Backup criptografado por senha, íntegro e pronto para restauração.".to_string()
+    } else if manifest.encryption_mode == "device" {
+        "Backup protegido pelo Stronghold deste computador e pronto para restauração.".to_string()
     } else {
         "Backup compatível e pronto para restauração.".to_string()
     };
@@ -733,67 +983,51 @@ pub async fn preview_backup(
 #[tauri::command]
 pub async fn restore_backup(
     app: AppHandle,
+    database_state: State<'_, EncryptedDatabaseState>,
     source: String,
+    credential: Option<String>,
+    safety_credential: Option<String>,
 ) -> Result<RestoreOperationResult, String> {
     let source_path = PathBuf::from(&source);
-    let (manifest, database_bytes, integrity) = extract_and_validate_backup(&source_path).await?;
+    let (manifest, database_bytes, integrity) =
+        extract_and_validate_backup(&source_path, credential.as_deref()).await?;
     if !integrity.ok {
         return Err("A restauração foi bloqueada porque o backup está corrompido.".to_string());
     }
-    if manifest.schema_version != CURRENT_SCHEMA_VERSION {
+    if manifest.schema_version < 1 || manifest.schema_version > CURRENT_SCHEMA_VERSION {
         return Err(format!(
-            "A restauração foi bloqueada: schema do backup {}, schema necessário {}.",
+            "A restauração foi bloqueada: schema do backup {}, faixa aceita de 1 a {}.",
             manifest.schema_version, CURRENT_SCHEMA_VERSION
         ));
     }
 
-    let database = database_path(&app)?;
     let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     let safety_destination = backups_dir(&app)?
         .join(format!("FinnacialUX-antes-da-restauracao-{timestamp}.{BACKUP_EXTENSION}"));
-    let safety_record = create_backup_internal(&app, safety_destination, "pre_restore").await?;
+    let safety_mode = if safety_credential.is_some() { "device" } else { "none" };
+    let safety_record = create_backup_internal(
+        &app,
+        &database_state,
+        safety_destination,
+        "pre_restore",
+        safety_mode,
+        safety_credential.as_deref(),
+    )
+    .await?;
 
-    let parent = database
-        .parent()
-        .ok_or_else(|| "A pasta do banco não pôde ser determinada.".to_string())?;
-    let staged = parent.join("finnacialux.restore.new");
-    let previous = parent.join("finnacialux.restore.previous");
-    fs::write(&staged, database_bytes).map_err(to_error)?;
+    let temporary_directory = TempDir::new().map_err(to_error)?;
+    let snapshot_path = temporary_directory.path().join("finnacialux-restored.sqlite");
+    fs::write(&snapshot_path, database_bytes).map_err(to_error)?;
+    replace_from_plaintext_snapshot(&app, &database_state, &snapshot_path).await?;
 
-    for sidecar in ["finnacialux.db-wal", "finnacialux.db-shm"] {
-        let path = parent.join(sidecar);
-        if path.exists() {
-            let _ = fs::remove_file(path);
-        }
-    }
-    if previous.exists() {
-        fs::remove_file(&previous).map_err(to_error)?;
-    }
-    if database.exists() {
-        fs::rename(&database, &previous).map_err(|error| {
-            format!(
-                "Não foi possível liberar o banco atual. Feche operações abertas e tente novamente: {error}"
-            )
-        })?;
-    }
-
-    if let Err(error) = fs::rename(&staged, &database) {
-        let _ = fs::rename(&previous, &database);
-        return Err(format!("A substituição do banco falhou e foi revertida: {error}"));
-    }
-    let restored_integrity = validate_database(&database).await?;
+    let restored_integrity = validate_current_database(&app, &database_state).await?;
     if !restored_integrity.ok {
-        let _ = fs::remove_file(&database);
-        let _ = fs::rename(&previous, &database);
-        return Err("O banco restaurado falhou na validação final e a versão anterior foi recuperada.".to_string());
+        return Err("O banco restaurado não passou na validação final.".to_string());
     }
-    if let Err(error) = insert_backup_history(&app, &safety_record).await {
+    if let Err(error) = insert_backup_history(&app, &database_state, &safety_record).await {
         log::warn!("pre_restore_history_reinsert_failed error={}", error);
     }
-    if previous.exists() {
-        let _ = fs::remove_file(previous);
-    }
-    log::warn!("backup_restored schema={}", manifest.schema_version);
+    log::warn!("backup_restored schema={} encryption={}", manifest.schema_version, manifest.encryption_mode);
     Ok(RestoreOperationResult {
         restored: true,
         safety_backup_path: safety_record.file_path,
@@ -803,8 +1037,11 @@ pub async fn restore_backup(
 }
 
 #[tauri::command]
-pub async fn run_integrity_check(app: AppHandle) -> Result<IntegrityReport, String> {
-    let report = validate_database(&database_path(&app)?).await?;
+pub async fn run_integrity_check(
+    app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
+) -> Result<IntegrityReport, String> {
+    let report = validate_current_database(&app, &database).await?;
     if report.ok {
         log::info!("database_integrity_check status=ok schema={}", report.schema_version);
     } else {
@@ -816,8 +1053,11 @@ pub async fn run_integrity_check(app: AppHandle) -> Result<IntegrityReport, Stri
     Ok(report)
 }
 
-async fn migration_history(path: &Path) -> Result<Vec<MigrationEntry>, String> {
-    let mut connection = connect_database(path).await?;
+async fn migration_history(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+) -> Result<Vec<MigrationEntry>, String> {
+    let mut connection = connect_database(app, database).await?;
     let rows = sqlx::query(
         "SELECT version, description, applied_at FROM app_schema_history ORDER BY version DESC",
     )
@@ -836,17 +1076,30 @@ async fn migration_history(path: &Path) -> Result<Vec<MigrationEntry>, String> {
     Ok(entries)
 }
 
-#[tauri::command]
-pub async fn get_diagnostics(
-    app: AppHandle,
+async fn get_diagnostics_internal(
+    app: &AppHandle,
+    database_state: &EncryptedDatabaseState,
     safe_mode: bool,
-    recovery_state: State<'_, RecoveryState>,
+    recovery_state: &RecoveryState,
 ) -> Result<DiagnosticReport, String> {
-    let database = database_path(&app)?;
-    let backups = list_backups(app.clone()).await?;
-    let integrity = validate_database(&database).await?;
-    let migrations = migration_history(&database).await?;
-    let config_directory = app_config_dir(&app)?;
+    let database = database_path(app)?;
+    let backups = list_backups_internal(app, database_state).await?;
+    let integrity = validate_current_database(app, database_state).await?;
+    let migrations = migration_history(app, database_state).await?;
+    let encryption = database_state.status().unwrap_or(DatabaseEncryptionStatus {
+        opened: false,
+        encrypted: false,
+        cipher_version: String::new(),
+        schema_version: 0,
+        key_fingerprint: String::new(),
+        database_path: database.to_string_lossy().to_string(),
+        database_size_bytes: fs::metadata(&database).map(|meta| meta.len()).unwrap_or(0),
+        encrypted_at: None,
+        last_key_rotation_at: None,
+        migrated_from_plaintext: false,
+        migration_backup_path: None,
+    });
+    let config_directory = app_config_dir(app)?;
     Ok(DiagnosticReport {
         app_name: app.package_info().name.clone(),
         app_version: app.package_info().version.to_string(),
@@ -856,8 +1109,15 @@ pub async fn get_diagnostics(
         database_path: database.to_string_lossy().to_string(),
         database_exists: database.exists(),
         database_size_bytes: fs::metadata(&database).map(|meta| meta.len()).unwrap_or(0),
-        backups_directory: backups_dir(&app)?.to_string_lossy().to_string(),
-        logs_directory: logs_dir(&app)?.to_string_lossy().to_string(),
+        database_encrypted: encryption.encrypted,
+        database_cipher_version: encryption.cipher_version,
+        database_key_fingerprint: encryption.key_fingerprint,
+        database_encrypted_at: encryption.encrypted_at,
+        database_last_key_rotation_at: encryption.last_key_rotation_at,
+        database_migrated_from_plaintext: encryption.migrated_from_plaintext,
+        database_migration_backup_path: encryption.migration_backup_path,
+        backups_directory: backups_dir(app)?.to_string_lossy().to_string(),
+        logs_directory: logs_dir(app)?.to_string_lossy().to_string(),
         available_disk_bytes: available_space(&config_directory).unwrap_or(0),
         backup_count: backups.len(),
         last_backup_at: backups.first().map(|record| record.created_at.clone()),
@@ -867,6 +1127,16 @@ pub async fn get_diagnostics(
         migrations,
         generated_at: Utc::now().to_rfc3339(),
     })
+}
+
+#[tauri::command]
+pub async fn get_diagnostics(
+    app: AppHandle,
+    database_state: State<'_, EncryptedDatabaseState>,
+    safe_mode: bool,
+    recovery_state: State<'_, RecoveryState>,
+) -> Result<DiagnosticReport, String> {
+    get_diagnostics_internal(&app, &database_state, safe_mode, &recovery_state).await
 }
 
 fn read_recent_logs(directory: &Path) -> Vec<String> {
@@ -898,12 +1168,13 @@ fn read_recent_logs(directory: &Path) -> Vec<String> {
 #[tauri::command]
 pub async fn export_diagnostic_package(
     app: AppHandle,
+    database_state: State<'_, EncryptedDatabaseState>,
     destination: String,
     safe_mode: bool,
     recovery_state: State<'_, RecoveryState>,
 ) -> Result<String, String> {
     let destination = ensure_extension(PathBuf::from(destination), DIAGNOSTIC_EXTENSION);
-    let report = get_diagnostics(app.clone(), safe_mode, recovery_state).await?;
+    let report = get_diagnostics_internal(&app, &database_state, safe_mode, &recovery_state).await?;
     let payload = serde_json::json!({
         "format": "finnacialux-diagnostic",
         "formatVersion": 1,
@@ -921,13 +1192,17 @@ pub async fn export_diagnostic_package(
 }
 
 #[tauri::command]
-pub async fn get_backup_preferences(app: AppHandle) -> Result<BackupPreferences, String> {
-    load_backup_preferences_internal(&app).await
+pub async fn get_backup_preferences(
+    app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
+) -> Result<BackupPreferences, String> {
+    load_backup_preferences_internal(&app, &database).await
 }
 
 #[tauri::command]
 pub async fn save_backup_preferences(
     app: AppHandle,
+    database: State<'_, EncryptedDatabaseState>,
     preferences: BackupPreferences,
 ) -> Result<BackupPreferences, String> {
     if !matches!(preferences.frequency.as_str(), "daily" | "weekly" | "monthly") {
@@ -936,27 +1211,31 @@ pub async fn save_backup_preferences(
     if !(1..=60).contains(&preferences.retention_count) {
         return Err("A retenção deve ficar entre 1 e 60 cópias.".to_string());
     }
-    let path = database_path(&app)?;
-    let mut connection = connect_database(&path).await?;
+    if !matches!(preferences.encryption_mode.as_str(), "device" | "none") {
+        return Err("O backup automático aceita proteção local ou sem criptografia.".to_string());
+    }
+    let mut connection = connect_database(&app, &database).await?;
     sqlx::query(
         r#"UPDATE backup_preferences
               SET automatic_enabled = $1,
                   frequency = $2,
                   retention_count = $3,
                   include_attachments = $4,
-                  updated_at = $5
+                  encryption_mode = $5,
+                  updated_at = $6
             WHERE id = 1"#,
     )
     .bind(if preferences.automatic_enabled { 1 } else { 0 })
     .bind(&preferences.frequency)
     .bind(preferences.retention_count)
     .bind(if preferences.include_attachments { 1 } else { 0 })
+    .bind(&preferences.encryption_mode)
     .bind(Utc::now().to_rfc3339())
     .execute(&mut connection)
     .await
     .map_err(to_error)?;
     connection.close().await.map_err(to_error)?;
-    load_backup_preferences_internal(&app).await
+    load_backup_preferences_internal(&app, &database).await
 }
 
 #[tauri::command]

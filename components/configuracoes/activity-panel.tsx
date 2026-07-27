@@ -11,6 +11,7 @@ import {
   WorkspaceIcon,
 } from "@/components/shared/icons";
 import { settingsContent } from "@/content/configuracoes";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { formatSearchDate, matchesSearch } from "@/lib/search";
 import { exportActivityHistory, formatSettingsDateTime } from "@/lib/settings";
 import type { ActivityLogEntry, ActivityStatus, ActivityType } from "@/types/configuracoes";
@@ -25,6 +26,7 @@ const typeIcons: Record<ActivityType, React.ReactNode> = {
 };
 
 export function ActivityPanel({ entries }: { entries: ActivityLogEntry[] }) {
+  const { confirmSensitiveAction } = useDesktopSecurity();
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"all" | ActivityType>("all");
   const [status, setStatus] = useState<"all" | ActivityStatus>("all");
@@ -53,7 +55,7 @@ export function ActivityPanel({ entries }: { entries: ActivityLogEntry[] }) {
           <h2>{settingsContent.activity.title}</h2>
           <p>{settingsContent.activity.description}</p>
         </div>
-        <button className="secondary-action-button" type="button" onClick={() => exportActivityHistory(filteredEntries)}><DownloadIcon /> {settingsContent.activity.export}</button>
+        <button className="secondary-action-button" type="button" onClick={() => void confirmSensitiveAction("export").then((allowed) => { if (allowed) exportActivityHistory(filteredEntries); })}><DownloadIcon /> {settingsContent.activity.export}</button>
       </header>
 
       <div className="activity-filters">

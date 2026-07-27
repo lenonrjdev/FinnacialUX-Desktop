@@ -15,15 +15,36 @@ function Invoke-Checked([string]$Description, [scriptblock]$Command) {
   }
 }
 
+function Require-ProjectFile([string]$RelativePath) {
+  $FullPath = Join-Path $Root $RelativePath
+  if (-not (Test-Path $FullPath -PathType Leaf)) {
+    throw "Arquivo obrigatório ausente: $RelativePath. Reaplique o Hotfix 4.0.1 antes de continuar."
+  }
+}
+
 Write-Host ""
 Write-Host "FINNACIALUX DESKTOP - CONFIGURACAO INICIAL" -ForegroundColor Cyan
 Write-Host "Raiz: $Root"
+
+$RequiredProjectFiles = @(
+  "types\desktop-security.ts",
+  "types\configuracoes.ts",
+  "components\security\desktop-lock-screen.tsx",
+  "components\security\sensitive-action-dialog.tsx",
+  "components\configuracoes\backups-panel.tsx",
+  "src-tauri\migrations\0003_local_security.sql",
+  "src-tauri\migrations\0004_database_encryption.sql"
+)
+foreach ($RequiredProjectFile in $RequiredProjectFiles) {
+  Require-ProjectFile $RequiredProjectFile
+}
 
 Require-Command "node" "Node.js não encontrado. Instale o Node.js 22 LTS atualizado."
 Require-Command "npm" "npm não encontrado. Reinstale o Node.js LTS."
 Require-Command "rustc" "Rust não encontrado. Execute: winget install --id Rustlang.Rustup"
 Require-Command "cargo" "Cargo não encontrado. Feche e abra o PowerShell depois de instalar o Rust."
 Require-Command "rustup" "rustup não encontrado. Reinstale o Rust pelo instalador oficial."
+Require-Command "perl" "Perl não encontrado. A compilação local do SQLCipher/OpenSSL exige Perl. Instale com: winget install --id StrawberryPerl.StrawberryPerl"
 
 $nodeVersionText = (node --version).TrimStart('v')
 $nodeVersion = [Version]$nodeVersionText
@@ -35,6 +56,10 @@ Write-Host "Node:  $(node --version)" -ForegroundColor DarkGray
 Write-Host "npm:   $(npm --version)" -ForegroundColor DarkGray
 Write-Host "Rust:  $(rustc --version)" -ForegroundColor DarkGray
 Write-Host "Cargo: $(cargo --version)" -ForegroundColor DarkGray
+Write-Host "Perl:  $((perl -v | Select-String -Pattern 'This is perl' | Select-Object -First 1).Line.Trim())" -ForegroundColor DarkGray
+if (-not (Get-Command "nasm" -ErrorAction SilentlyContinue)) {
+  Write-Host "NASM não encontrado. O OpenSSL será compilado sem rotinas assembly quando suportado. Para melhor desempenho: winget install --id NASM.NASM" -ForegroundColor DarkYellow
+}
 
 Write-Host "`n==> Instalando dependências JavaScript" -ForegroundColor Yellow
 Invoke-Checked "npm install" { npm install }
@@ -48,10 +73,11 @@ Invoke-Checked "Typecheck" { npm run typecheck }
 Write-Host "`n==> Gerando o frontend estático" -ForegroundColor Yellow
 Invoke-Checked "Build do Next.js" { npm run build }
 
-Write-Host "`n==> Validando o aplicativo nativo" -ForegroundColor Yellow
+Write-Host "`n==> Validando SQLCipher, OpenSSL e o aplicativo nativo" -ForegroundColor Yellow
+Write-Host "A primeira compilação desta fase pode demorar mais porque SQLCipher e OpenSSL são incorporados ao executável." -ForegroundColor DarkGray
 cargo check --manifest-path .\src-tauri\Cargo.toml
 if ($LASTEXITCODE -ne 0) {
-  throw "Validação nativa falhou. Se o terminal mostrar 'link.exe not found', instale o Visual Studio Build Tools 2022 com a carga 'Desenvolvimento para desktop com C++', feche o terminal e execute este script novamente."
+  throw "Validação nativa falhou. Confirme Visual Studio Build Tools com C++, Strawberry Perl e, quando solicitado, NASM. Depois feche e abra o PowerShell e execute novamente."
 }
 
 Write-Host "`nConfiguração validada com sucesso." -ForegroundColor Green

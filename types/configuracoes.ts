@@ -55,10 +55,13 @@ export type NotificationSettings = {
 };
 
 export type SecuritySettings = {
-  twoFactorEnabled: boolean;
-  loginAlerts: boolean;
-  sessionTimeoutMinutes: number;
+  pinEnabled: boolean;
+  autoLockMinutes: 0 | 5 | 15 | 30 | 60 | 120;
+  lockOnMinimize: boolean;
   requirePasswordForExports: boolean;
+  requirePasswordForRestore: boolean;
+  encryptedBackupsDefault: boolean;
+  vaultInitialized: boolean;
 };
 
 export type ActiveSession = {
@@ -88,6 +91,7 @@ export type BackupSettings = {
   frequency: BackupFrequency;
   retentionCount: number;
   includeAttachments: boolean;
+  encryptionMode: "device" | "none";
   lastAutomaticAt?: string | null;
 };
 
@@ -106,6 +110,7 @@ export type BackupSnapshot = {
   appVersion?: string;
   schemaVersion?: number;
   errorMessage?: string | null;
+  encryptionMode?: "none" | "device" | "password";
 };
 
 export type PasswordChangeInput = {

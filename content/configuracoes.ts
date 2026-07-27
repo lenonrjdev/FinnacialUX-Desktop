@@ -21,7 +21,7 @@ export const settingsContent = {
     protection: "Proteção da conta",
     protectionEnabled: "Proteção reforçada",
     protectionPending: "Ação recomendada",
-    protectionHelper: "Alertas de acesso e verificação em duas etapas",
+    protectionHelper: "PIN, bloqueio automático e cofre local",
     lastActivity: "Última atividade",
     lastActivityHelper: "Registro mais recente da conta",
     backups: "Backups disponíveis",
@@ -85,7 +85,7 @@ export const settingsContent = {
   },
   security: {
     title: "Segurança da conta",
-    description: "Revise as proteções de acesso e os dispositivos conectados.",
+    description: "Revise as proteções de acesso, o PIN, o bloqueio e as confirmações locais.",
     passwordTitle: "Alterar senha",
     currentPassword: "Senha atual",
     newPassword: "Nova senha",
@@ -106,7 +106,7 @@ export const settingsContent = {
     revokeOthers: "Encerrar outras sessões",
     twoFactorEnabled: "Verificação em duas etapas ativada.",
     twoFactorDisabled: "Verificação em duas etapas desativada.",
-    passwordChanged: "Senha atualizada nesta sessão demonstrativa.",
+    passwordChanged: "Senha local atualizada com segurança.",
     invalidPassword: "Confira os campos. A nova senha precisa ter pelo menos 8 caracteres e coincidir.",
   },
   activity: {

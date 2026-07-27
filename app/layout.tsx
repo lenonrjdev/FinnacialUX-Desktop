@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { DesktopProtectionProvider } from "@/components/providers/desktop-protection-provider";
+import { DesktopSecurityProvider } from "@/components/providers/desktop-security-provider";
 import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
 import { metadataContent } from "@/content/metadata";
@@ -47,9 +48,13 @@ export default function RootLayout({
       </head>
       <body>
         <DesktopRecoveryGate>
-          <DesktopProtectionProvider>
-            <AuthProvider><AppRouteShell>{children}</AppRouteShell></AuthProvider>
-          </DesktopProtectionProvider>
+          <AuthProvider>
+            <DesktopSecurityProvider>
+              <DesktopProtectionProvider>
+                <AppRouteShell>{children}</AppRouteShell>
+              </DesktopProtectionProvider>
+            </DesktopSecurityProvider>
+          </AuthProvider>
         </DesktopRecoveryGate>
       </body>
     </html>

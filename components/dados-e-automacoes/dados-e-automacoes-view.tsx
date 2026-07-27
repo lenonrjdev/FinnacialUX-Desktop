@@ -11,6 +11,7 @@ import { ImportPreview } from "@/components/dados-e-automacoes/import-preview";
 import { RuleDialog } from "@/components/dados-e-automacoes/rule-dialog";
 import { RulesPanel } from "@/components/dados-e-automacoes/rules-panel";
 import { CheckIcon } from "@/components/shared/icons";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { useFinanceDataState } from "@/components/providers/finance-data-provider";
 import { dataToolsContent } from "@/content/dados-e-automacoes";
 import { initialAccounts } from "@/data/contas";
@@ -49,6 +50,7 @@ import type {
 import type { FinancialTransaction } from "@/types/lancamentos";
 
 export default function DadosEAutomacoesView() {
+  const { confirmSensitiveAction } = useDesktopSecurity();
   const [view, setView] = useState<DataToolsView>("import");
   const [parsed, setParsed] = useState<ImportParseResult | null>(null);
   const [mapping, setMapping] = useState<CsvMapping>({});
@@ -189,7 +191,8 @@ export default function DadosEAutomacoesView() {
     showFeedback(dataToolsContent.feedback.imported);
   }
 
-  function exportData(forceBackup = false) {
+  async function exportData(forceBackup = false) {
+    if (!(await confirmSensitiveAction("export"))) return;
     const configuration = forceBackup ? { ...exportConfiguration, dataset: "full-backup" as const, format: "json" as const } : exportConfiguration;
     if (configuration.dataset === "full-backup") {
       downloadTextFile(JSON.stringify(buildFullBackup(financialData), null, 2), `backup-financeiro-${dataToolsReferenceDate}.json`, "application/json;charset=utf-8");
@@ -264,7 +267,7 @@ export default function DadosEAutomacoesView() {
 
   return (
     <div className="financial-management-page data-tools-page">
-      <DataToolsHeading onSample={loadSample} onBackup={() => exportData(true)} />
+      <DataToolsHeading onSample={loadSample} onBackup={() => void exportData(true)} />
       <DataToolsSummary previewRows={rows.length} activeRules={activeRules} history={history} />
       <DataToolsToolbar view={view} onChange={setView} />
 
@@ -282,7 +285,7 @@ export default function DadosEAutomacoesView() {
         </div>
       ) : null}
 
-      {view === "export" ? <ExportPanel configuration={exportConfiguration} preview={exportPreview} onChange={(patch) => setExportConfiguration((current) => ({ ...current, ...patch }))} onExport={() => exportData()} /> : null}
+      {view === "export" ? <ExportPanel configuration={exportConfiguration} preview={exportPreview} onChange={(patch) => setExportConfiguration((current) => ({ ...current, ...patch }))} onExport={() => void exportData()} /> : null}
 
       {view === "rules" ? (
         <RulesPanel

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import {
   ArchiveIcon,
   CheckIcon,
@@ -21,6 +22,7 @@ import { formatFileSize, formatSettingsDateTime } from "@/lib/settings";
 import type { DiagnosticReport } from "@/types/desktop-protection";
 
 export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string) => void }) {
+  const { confirmSensitiveAction } = useDesktopSecurity();
   const [report, setReport] = useState<DiagnosticReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -57,6 +59,7 @@ export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string)
   }
 
   async function exportPackage() {
+    if (!(await confirmSensitiveAction("export"))) return;
     const destination = await chooseDiagnosticDestination();
     if (!destination) return;
     try {
@@ -108,7 +111,7 @@ export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string)
         </div>
 
         <div className="diagnostic-metrics-grid">
-          <article><span><DatabaseIcon /></span><div><small>Banco local</small><strong>{formatFileSize(report.databaseSizeBytes)}</strong><p>Schema {report.integrity.schemaVersion}</p></div></article>
+          <article className={report.databaseEncrypted ? "diagnostic-secure-metric" : "diagnostic-warning-metric"}><span>{report.databaseEncrypted ? <CheckIcon /> : <WarningIcon />}</span><div><small>Banco local</small><strong>{report.databaseEncrypted ? "Criptografado" : "Não confirmado"}</strong><p>{formatFileSize(report.databaseSizeBytes)} · schema {report.integrity.schemaVersion}</p></div></article>
           <article><span><ArchiveIcon /></span><div><small>Backups registrados</small><strong>{report.backupCount}</strong><p>{report.lastBackupAt ? `Último em ${formatSettingsDateTime(report.lastBackupAt)}` : "Nenhuma cópia criada"}</p></div></article>
           <article><span><CheckIcon /></span><div><small>Chaves estrangeiras</small><strong>{report.integrity.foreignKeyViolations}</strong><p>{report.integrity.foreignKeyViolations === 0 ? "Sem violações" : "Revisão recomendada"}</p></div></article>
           <article><span><DatabaseIcon /></span><div><small>Espaço livre</small><strong>{formatFileSize(report.availableDiskBytes)}</strong><p>Na unidade dos dados locais</p></div></article>
@@ -116,10 +119,15 @@ export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string)
 
         <div className="diagnostic-system-grid">
           <article><small>Aplicativo</small><strong>{report.appName} {report.appVersion}</strong><span>{report.identifier}</span></article>
+          <article><small>Criptografia do banco</small><strong>{report.databaseCipherVersion || "Indisponível"}</strong><span>Chave {report.databaseKeyFingerprint || "não identificada"}{report.databaseLastKeyRotationAt ? ` · rotacionada em ${formatSettingsDateTime(report.databaseLastKeyRotationAt)}` : ""}</span></article>
           <article><small>Sistema operacional</small><strong>{report.operatingSystem}</strong><span>Arquitetura {report.architecture}</span></article>
           <article><small>Inicialização anterior</small><strong>{report.previousUncleanShutdown ? "Encerramento inesperado detectado" : "Encerramento normal"}</strong><span>{report.safeMode ? "Modo seguro ativo" : "Modo normal"}</span></article>
           <article><small>Tabelas essenciais</small><strong>{report.integrity.requiredTablesPresent ? "Presentes" : "Incompletas"}</strong><span>{report.integrity.integrityMessages.join(", ")}</span></article>
         </div>
+
+        {report.databaseMigratedFromPlaintext ? (
+          <div className="diagnostic-encryption-note"><CheckIcon /><div><strong>Migração criptografada concluída</strong><span>O banco legado foi convertido para SQLCipher e uma cópia técnica protegida foi criada antes da substituição.</span></div></div>
+        ) : null}
 
         {error ? <div className="diagnostic-inline-error"><WarningIcon /> {error}</div> : null}
       </section>

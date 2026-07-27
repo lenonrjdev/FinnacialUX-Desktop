@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
-import { BackupsPanel } from "@/components/configuracoes/backups-panel";
+import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
 import { NotificationsPanel } from "@/components/configuracoes/notifications-panel";
 import { PreferencesPanel } from "@/components/configuracoes/preferences-panel";
@@ -12,11 +12,11 @@ import { SettingsHeading } from "@/components/configuracoes/settings-heading";
 import { SettingsNavigation } from "@/components/configuracoes/settings-navigation";
 import { SettingsSummary } from "@/components/configuracoes/settings-summary";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { useFinanceDataState } from "@/components/providers/finance-data-provider";
 import { CheckIcon } from "@/components/shared/icons";
 import { settingsContent } from "@/content/configuracoes";
 import {
-  initialActiveSessions,
   initialActivityLog,
   initialBackupSettings,
   initialBackupSnapshots,
@@ -32,6 +32,7 @@ import {
   chooseBackupSource,
   createManualBackup,
   getNativeBackupPreferences,
+  inspectNativeBackup,
   listNativeBackups,
   openDesktopFolder,
   previewNativeBackup,
@@ -47,7 +48,7 @@ import {
 } from "@/lib/settings";
 import type { FinancialAccount } from "@/types/contas";
 import type {
-  ActiveSession,
+  ActivityLogEntry,
   BackupSettings,
   BackupSnapshot,
   FinancialPreferences,
@@ -55,7 +56,11 @@ import type {
   SecuritySettings,
   SettingsView,
 } from "@/types/configuracoes";
-import type { BackupPreview, NativeBackupRecord } from "@/types/desktop-protection";
+import type { BackupHeader, BackupPreview, NativeBackupRecord } from "@/types/desktop-protection";
+import { listSecurityEvents } from "@/lib/desktop/security";
+import { getDatabaseEncryptionStatus, rotateDatabaseEncryptionKey } from "@/lib/desktop/database";
+import type { LocalSecuritySettings, SecurityEventRecord } from "@/types/desktop-security";
+import type { DatabaseEncryptionStatus } from "@/types/desktop-database";
 
 type WorkspaceSettingsDocument = {
   preferences: FinancialPreferences;
@@ -86,28 +91,73 @@ function toBackupSnapshot(record: NativeBackupRecord): BackupSnapshot {
     checksumSha256: record.checksumSha256,
     appVersion: record.appVersion,
     schemaVersion: record.schemaVersion,
+    encryptionMode: record.encryptionMode,
     errorMessage: record.errorMessage,
+  };
+}
+
+
+const securityEventTitles: Record<string, string> = {
+  password_verified: "Senha local confirmada",
+  password_rejected: "Tentativa de senha rejeitada",
+  password_changed: "Senha local alterada",
+  pin_enabled: "PIN local ativado",
+  pin_disabled: "PIN local removido",
+  pin_unlocked: "Aplicativo desbloqueado por PIN",
+  pin_rejected: "Tentativa de PIN rejeitada",
+  application_locked: "Aplicativo bloqueado",
+  security_preferences_changed: "Preferências de segurança alteradas",
+  database_encrypted: "Banco local criptografado",
+  database_key_rotated: "Chave do banco rotacionada",
+};
+
+function toActivityEntry(event: SecurityEventRecord, actor: string): ActivityLogEntry {
+  return {
+    id: event.id,
+    type: "security",
+    title: securityEventTitles[event.eventType] ?? "Evento de segurança local",
+    description: event.message,
+    actor,
+    occurredAt: event.createdAt,
+    device: "Este computador",
+    status: event.severity === "info" ? "success" : event.severity === "warning" ? "attention" : "blocked",
+  };
+}
+
+function toSecuritySettings(stored: LocalSecuritySettings): SecuritySettings {
+  return {
+    pinEnabled: stored.pinEnabled,
+    autoLockMinutes: stored.autoLockMinutes,
+    lockOnMinimize: stored.lockOnMinimize,
+    requirePasswordForExports: stored.requirePasswordForExports,
+    requirePasswordForRestore: stored.requirePasswordForRestore,
+    encryptedBackupsDefault: stored.encryptedBackupsDefault,
+    vaultInitialized: stored.vaultInitialized,
   };
 }
 
 export default function ConfiguracoesView() {
   const { user, refreshSession } = useAuth();
+  const desktopSecurity = useDesktopSecurity();
   const [view, setView] = useState<SettingsView>("profile");
   const [profile, setProfile] = useState(initialProfileSettings);
   const [preferences, setPreferences] = useState(initialFinancialPreferences);
   const [notifications, setNotifications] = useState(initialNotificationSettings);
   const [security, setSecurity] = useState(initialSecuritySettings);
   const [backupSettings, setBackupSettings] = useState(initialBackupSettings);
-  const [sessions, setSessions] = useState<ActiveSession[]>(initialActiveSessions);
   const [workspaceSettings, setWorkspaceSettings] = useFinanceDataState<WorkspaceSettingsDocument>(
     "workspace-settings",
     initialWorkspaceSettings,
   );
   const [snapshots, setSnapshots] = useState<BackupSnapshot[]>(initialBackupSnapshots);
+  const [restoreHeader, setRestoreHeader] = useState<BackupHeader | null>(null);
   const [restorePreview, setRestorePreview] = useState<BackupPreview | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [securityBusy, setSecurityBusy] = useState(false);
+  const [databaseSecurity, setDatabaseSecurity] = useState<DatabaseEncryptionStatus | null>(null);
   const [accounts] = useFinanceDataState<FinancialAccount[]>("accounts", initialAccounts);
   const [feedback, setFeedback] = useState("");
+  const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(initialActivityLog);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -116,8 +166,19 @@ export default function ConfiguracoesView() {
       appearance: getStoredAppearance(workspaceSettings.preferences.appearance),
     });
     setNotifications(workspaceSettings.notifications);
-    setSecurity(workspaceSettings.security);
   }, [workspaceSettings]);
+
+  useEffect(() => {
+    setSecurity(toSecuritySettings(desktopSecurity.settings));
+  }, [desktopSecurity.settings]);
+
+  useEffect(() => {
+    let active = true;
+    void getDatabaseEncryptionStatus()
+      .then((status) => { if (active) setDatabaseSecurity(status); })
+      .catch(() => { if (active) setDatabaseSecurity(null); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -129,6 +190,7 @@ export default function ConfiguracoesView() {
           frequency: stored.frequency,
           retentionCount: stored.retentionCount,
           includeAttachments: stored.includeAttachments,
+          encryptionMode: stored.encryptionMode,
           lastAutomaticAt: stored.lastAutomaticAt,
         });
         setSnapshots(records.map(toBackupSnapshot));
@@ -145,6 +207,10 @@ export default function ConfiguracoesView() {
       phone: user.phone ?? "",
       timeZone: user.timezone,
     });
+
+    void listSecurityEvents(user.id, 100)
+      .then((events) => setActivityEntries(events.map((event) => toActivityEntry(event, user.name))))
+      .catch(() => setActivityEntries([]));
 
     void usersApi.getPreferences()
       .then((stored) => {
@@ -173,21 +239,28 @@ export default function ConfiguracoesView() {
       .catch(() => undefined);
   }, [user]);
 
-  const protectedAccount = security.twoFactorEnabled && security.loginAlerts;
+  const protectedAccount = desktopSecurity.vaultReady
+    && (security.pinEnabled || security.requirePasswordForRestore || security.encryptedBackupsDefault);
   const availableBackupsCount = snapshots.filter((snapshot) => snapshot.status === "available").length;
   const lastActivityAt = useMemo(
-    () => [...initialActivityLog].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0]?.occurredAt ?? new Date().toISOString(),
-    [],
+    () => [...activityEntries].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0]?.occurredAt ?? new Date().toISOString(),
+    [activityEntries],
   );
 
   function showFeedback(message: string) {
     setFeedback(message);
-    window.setTimeout(() => setFeedback(""), 4200);
+    window.setTimeout(() => setFeedback(""), 5200);
   }
 
   async function refreshBackups() {
     const records = await listNativeBackups();
     setSnapshots(records.map(toBackupSnapshot));
+  }
+
+  async function refreshActivity() {
+    if (!user) return;
+    const events = await listSecurityEvents(user.id, 100);
+    setActivityEntries(events.map((event) => toActivityEntry(event, user.name)));
   }
 
   function changePreferences(next: FinancialPreferences) {
@@ -237,18 +310,44 @@ export default function ConfiguracoesView() {
         });
         showFeedback(settingsContent.feedback.notificationsSaved);
       } else if (view === "security") {
-        setWorkspaceSettings((current) => ({ ...current, security }));
-        showFeedback(settingsContent.feedback.securitySaved);
+        const stored = await desktopSecurity.updateSettings({
+          ...desktopSecurity.settings,
+          autoLockMinutes: security.autoLockMinutes,
+          lockOnMinimize: security.lockOnMinimize,
+          requirePasswordForExports: security.requirePasswordForExports,
+          requirePasswordForRestore: security.requirePasswordForRestore,
+          encryptedBackupsDefault: security.encryptedBackupsDefault,
+        });
+        const next = toSecuritySettings(stored);
+        const defaultEncryptionMode = stored.encryptedBackupsDefault ? "device" : "none";
+        const storedBackupSettings = await saveNativeBackupPreferences({
+          automaticEnabled: backupSettings.automaticEnabled,
+          frequency: backupSettings.frequency,
+          retentionCount: backupSettings.retentionCount,
+          includeAttachments: backupSettings.includeAttachments,
+          encryptionMode: defaultEncryptionMode,
+          lastAutomaticAt: backupSettings.lastAutomaticAt ?? null,
+        });
+        setSecurity(next);
+        setBackupSettings((current) => ({ ...current, encryptionMode: storedBackupSettings.encryptionMode }));
+        setWorkspaceSettings((current) => ({
+          ...current,
+          security: next,
+          backupSettings: { ...current.backupSettings, encryptionMode: storedBackupSettings.encryptionMode },
+        }));
+        showFeedback("Preferências de segurança local e proteção padrão dos backups salvas.");
       } else if (view === "backups") {
         const stored = await saveNativeBackupPreferences({
           automaticEnabled: backupSettings.automaticEnabled,
           frequency: backupSettings.frequency,
           retentionCount: backupSettings.retentionCount,
           includeAttachments: backupSettings.includeAttachments,
+          encryptionMode: backupSettings.encryptionMode,
           lastAutomaticAt: backupSettings.lastAutomaticAt ?? null,
         });
-        setBackupSettings({ ...backupSettings, lastAutomaticAt: stored.lastAutomaticAt });
-        setWorkspaceSettings((current) => ({ ...current, backupSettings }));
+        const next = { ...backupSettings, encryptionMode: stored.encryptionMode, lastAutomaticAt: stored.lastAutomaticAt };
+        setBackupSettings(next);
+        setWorkspaceSettings((current) => ({ ...current, backupSettings: next }));
         showFeedback(settingsContent.feedback.backupSettingsSaved);
       } else {
         showFeedback(settingsContent.heading.saved);
@@ -260,14 +359,22 @@ export default function ConfiguracoesView() {
     }
   }
 
-  async function createBackup() {
+  async function createBackup(options: CreateBackupOptions) {
+    if (!(await desktopSecurity.confirmSensitiveAction("export"))) return;
     setBackupBusy(true);
     try {
       const destination = await chooseBackupDestination();
       if (!destination) return;
-      await createManualBackup(destination);
+      const credential = options.mode === "device"
+        ? await desktopSecurity.getDeviceBackupKey()
+        : options.mode === "password"
+          ? options.password
+          : undefined;
+      await createManualBackup(destination, options.mode, credential);
       await refreshBackups();
-      showFeedback("Backup nativo criado, verificado e salvo no local escolhido.");
+      showFeedback(options.mode === "none"
+        ? "Backup criado sem criptografia. Guarde o arquivo em local seguro."
+        : "Backup criptografado, verificado e salvo no local escolhido.");
     } catch (caught) {
       showFeedback(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -289,12 +396,46 @@ export default function ConfiguracoesView() {
     }
   }
 
+  async function resolveCredential(header: BackupHeader, password?: string): Promise<string | undefined> {
+    if (header.manifest.encryptionMode === "device") return desktopSecurity.getDeviceBackupKey();
+    if (header.manifest.encryptionMode === "password") {
+      if (!password) throw new Error("Digite a senha usada para criptografar este backup.");
+      return password;
+    }
+    return undefined;
+  }
+
+  async function prepareRestoreSource(source: string) {
+    const header = await inspectNativeBackup(source);
+    setRestoreHeader(header);
+    setRestorePreview(null);
+    if (header.manifest.encryptionMode !== "password") {
+      const credential = await resolveCredential(header);
+      setRestorePreview(await previewNativeBackup(source, credential));
+    }
+  }
+
   async function selectRestoreFile() {
     setBackupBusy(true);
     try {
       const source = await chooseBackupSource();
       if (!source) return;
-      setRestorePreview(await previewNativeBackup(source));
+      await prepareRestoreSource(source);
+    } catch (caught) {
+      setRestoreHeader(null);
+      setRestorePreview(null);
+      showFeedback(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function unlockRestore(password: string) {
+    if (!restoreHeader) return;
+    setBackupBusy(true);
+    try {
+      const credential = await resolveCredential(restoreHeader, password);
+      setRestorePreview(await previewNativeBackup(restoreHeader.filePath, credential));
     } catch (caught) {
       setRestorePreview(null);
       showFeedback(caught instanceof Error ? caught.message : String(caught));
@@ -307,8 +448,9 @@ export default function ConfiguracoesView() {
     if (!snapshot.filePath) return;
     setBackupBusy(true);
     try {
-      setRestorePreview(await previewNativeBackup(snapshot.filePath));
+      await prepareRestoreSource(snapshot.filePath);
     } catch (caught) {
+      setRestoreHeader(null);
       setRestorePreview(null);
       showFeedback(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -316,16 +458,38 @@ export default function ConfiguracoesView() {
     }
   }
 
-  async function restoreBackup() {
-    if (!restorePreview?.compatible) return;
+  async function restoreBackup(password: string) {
+    if (!restorePreview?.compatible || !restoreHeader) return;
+    if (!(await desktopSecurity.confirmSensitiveAction("restore"))) return;
     setBackupBusy(true);
     try {
-      await restoreNativeBackup(restorePreview.filePath);
+      const credential = await resolveCredential(restoreHeader, password);
+      const safetyCredential = await desktopSecurity.getDeviceBackupKey();
+      await restoreNativeBackup(restorePreview.filePath, credential, safetyCredential);
       window.location.replace("/login/");
     } catch (caught) {
       showFeedback(caught instanceof Error ? caught.message : String(caught));
       setBackupBusy(false);
     }
+  }
+
+  async function runSecurityAction(action: () => Promise<void>) {
+    setSecurityBusy(true);
+    try {
+      await action();
+      await refreshActivity().catch(() => undefined);
+    } finally {
+      setSecurityBusy(false);
+    }
+  }
+
+  async function rotateDatabaseKey() {
+    if (!(await desktopSecurity.confirmSensitiveAction("security"))) return;
+    await runSecurityAction(async () => {
+      const status = await rotateDatabaseEncryptionKey();
+      setDatabaseSecurity(status);
+      showFeedback("A chave do banco SQLCipher foi rotacionada e validada com sucesso.");
+    });
   }
 
   return (
@@ -344,19 +508,42 @@ export default function ConfiguracoesView() {
       {view === "profile" ? <ProfileSettingsPanel value={profile} onChange={setProfile} /> : null}
       {view === "preferences" ? <PreferencesPanel value={preferences} accounts={accounts} onChange={changePreferences} /> : null}
       {view === "notifications" ? <NotificationsPanel value={notifications} onChange={setNotifications} /> : null}
-      {view === "security" ? <SecurityPanel value={security} sessions={sessions} onChange={setSecurity} onSessionsChange={setSessions} onFeedback={showFeedback} /> : null}
-      {view === "activity" ? <ActivityPanel entries={initialActivityLog} /> : null}
+      {view === "security" ? (
+        <SecurityPanel
+          value={security}
+          vaultReady={desktopSecurity.vaultReady}
+          databaseSecurity={databaseSecurity}
+          busy={securityBusy || desktopSecurity.loading}
+          onChange={setSecurity}
+          onChangePassword={(currentPassword, newPassword) => runSecurityAction(() => desktopSecurity.updatePassword(currentPassword, newPassword))}
+          onEnablePin={(password, pin) => runSecurityAction(async () => {
+            const stored = await desktopSecurity.enablePin(password, pin);
+            setSecurity(toSecuritySettings(stored));
+          })}
+          onDisablePin={(password) => runSecurityAction(async () => {
+            const stored = await desktopSecurity.disablePin(password);
+            setSecurity(toSecuritySettings(stored));
+          })}
+          onLockNow={() => desktopSecurity.lock("solicitação manual")}
+          onRotateDatabaseKey={rotateDatabaseKey}
+          onFeedback={showFeedback}
+        />
+      ) : null}
+      {view === "activity" ? <ActivityPanel entries={activityEntries} /> : null}
       {view === "backups" ? (
         <BackupsPanel
           settings={backupSettings}
           snapshots={snapshots}
+          restoreHeader={restoreHeader}
           restorePreview={restorePreview}
+          defaultMode={security.encryptedBackupsDefault ? "device" : "none"}
           busy={backupBusy}
           onSettingsChange={setBackupSettings}
           onCreate={createBackup}
           onRefresh={refreshBackups}
           onRemove={removeBackup}
           onSelectRestore={selectRestoreFile}
+          onUnlockRestore={unlockRestore}
           onPreviewSnapshot={previewSnapshot}
           onRestore={restoreBackup}
           onOpenFolder={() => openDesktopFolder("backups").then(() => undefined)}

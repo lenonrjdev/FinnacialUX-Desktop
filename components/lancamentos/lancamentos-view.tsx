@@ -10,6 +10,7 @@ import { TransactionsHeading } from "@/components/lancamentos/transactions-headi
 import { TransactionsList } from "@/components/lancamentos/transactions-list";
 import { TransactionsSummary } from "@/components/lancamentos/transactions-summary";
 import { CheckIcon } from "@/components/shared/icons";
+import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { transactionsContent } from "@/content/lancamentos";
 import { financialIntelligenceContent } from "@/content/financial-intelligence";
 import { getReferenceDate, getReferenceMonth } from "@/lib/reference-date";
@@ -29,6 +30,7 @@ const defaultFilters: TransactionsFilterState = {
 };
 
 export default function LancamentosView() {
+  const { confirmSensitiveAction } = useDesktopSecurity();
   const {
     transactions,
     accounts: financialAccounts,
@@ -168,7 +170,8 @@ export default function LancamentosView() {
     showFeedback(financialIntelligenceContent.feedback.transactionRemoved);
   }
 
-  function exportTransactions() {
+  async function exportTransactions() {
+    if (!(await confirmSensitiveAction("export"))) return;
     const columns = [
       "Descrição",
       "Tipo",
@@ -213,7 +216,7 @@ export default function LancamentosView() {
     <div className="transactions-page">
       <TransactionsHeading
         onCreate={() => setDialogOpen(true)}
-        onExport={exportTransactions}
+        onExport={() => void exportTransactions()}
       />
       <TransactionsSummary values={summary} />
       <TransactionsFilters

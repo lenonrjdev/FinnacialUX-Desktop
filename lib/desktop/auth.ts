@@ -1,6 +1,8 @@
 import { ApiError } from "@/lib/api/client";
 import { createInitials } from "@/lib/access-control";
-import { createPasswordCredential, createRecoveryToken, verifyPassword } from "@/lib/desktop/crypto";
+import { createRecoveryToken } from "@/lib/desktop/crypto";
+import { createArgon2Credential, verifyUserPassword } from "@/lib/desktop/security";
+import { ensureDeviceBackupKey } from "@/lib/desktop/stronghold";
 import { getDesktopDatabase } from "@/lib/desktop/database";
 import { clearLocalSession, readLocalSessionUserId, saveLocalSessionUserId } from "@/lib/desktop/session";
 import type { AuthenticatedProfile, PasswordRecoveryResponse } from "@/types/api";
@@ -8,12 +10,19 @@ import type { FinancialWorkspace } from "@/types/acessos";
 
 export type LocalLoginResult = { user: AuthenticatedProfile };
 
+function validateNewPassword(password: string) {
+  if (password.length < 8 || !/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) {
+    throw new ApiError("A senha precisa ter ao menos 8 caracteres, incluindo letra e número.", 400);
+  }
+}
+
 type UserRow = {
   id: string;
   name: string;
   email: string;
   password_hash: string;
   password_salt: string;
+  password_algorithm: string;
   phone: string | null;
   locale: string;
   timezone: string;
@@ -38,7 +47,7 @@ type WorkspaceRow = {
 async function findUserById(userId: string): Promise<UserRow | null> {
   const database = await getDesktopDatabase();
   const rows = await database.select<UserRow[]>(
-    `SELECT id, name, email, password_hash, password_salt, phone, locale, timezone
+    `SELECT id, name, email, password_hash, password_salt, password_algorithm, phone, locale, timezone
        FROM users
       WHERE id = $1
       LIMIT 1`,
@@ -50,7 +59,7 @@ async function findUserById(userId: string): Promise<UserRow | null> {
 async function findUserByEmail(email: string): Promise<UserRow | null> {
   const database = await getDesktopDatabase();
   const rows = await database.select<UserRow[]>(
-    `SELECT id, name, email, password_hash, password_salt, phone, locale, timezone
+    `SELECT id, name, email, password_hash, password_salt, password_algorithm, phone, locale, timezone
        FROM users
       WHERE lower(email) = lower($1)
       LIMIT 1`,
@@ -134,14 +143,18 @@ export const desktopAuth = {
 
   async login(email: string, password: string, remember: boolean): Promise<LocalLoginResult> {
     const user = await findUserByEmail(email);
-    if (!user || !(await verifyPassword(password, user.password_salt, user.password_hash))) {
+    if (!user || !(await verifyUserPassword(user.id, password, true))) {
       throw new ApiError("E-mail ou senha local inválidos.", 401);
     }
+    await ensureDeviceBackupKey();
     saveLocalSessionUserId(user.id, remember);
-    return { user: await buildProfile(user) };
+    const updated = await findUserById(user.id);
+    if (!updated) throw new ApiError("A conta local não foi encontrada após o acesso.", 401);
+    return { user: await buildProfile(updated) };
   },
 
   async register(name: string, email: string, password: string): Promise<LocalLoginResult> {
+    validateNewPassword(password);
     const database = await getDesktopDatabase();
     const normalizedEmail = email.trim().toLowerCase();
     if (await findUserByEmail(normalizedEmail)) {
@@ -151,13 +164,13 @@ export const desktopAuth = {
     const now = new Date().toISOString();
     const userId = crypto.randomUUID();
     const workspaceId = crypto.randomUUID();
-    const credential = await createPasswordCredential(password);
+    const credential = await createArgon2Credential(password);
 
     await database.execute(
       `INSERT INTO users (
-        id, name, email, password_hash, password_salt, phone, locale, timezone, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, NULL, 'pt-BR', 'America/Sao_Paulo', $6, $6)`,
-      [userId, name.trim(), normalizedEmail, credential.hash, credential.salt, now],
+        id, name, email, password_hash, password_salt, password_algorithm, phone, locale, timezone, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, '', $5, NULL, 'pt-BR', 'America/Sao_Paulo', $6, $6)`,
+      [userId, name.trim(), normalizedEmail, credential.hash, credential.algorithm, now],
     );
     await database.execute(
       `INSERT INTO workspaces (
@@ -176,6 +189,7 @@ export const desktopAuth = {
       [userId, workspaceId, now],
     );
 
+    await ensureDeviceBackupKey();
     saveLocalSessionUserId(userId, true);
     const user = await findUserById(userId);
     if (!user) throw new ApiError("Não foi possível concluir a criação da conta local.", 500);
@@ -203,6 +217,7 @@ export const desktopAuth = {
   },
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    validateNewPassword(password);
     const database = await getDesktopDatabase();
     const rows = await database.select<Array<{ user_id: string; expires_at: string }>>(
       `SELECT user_id, expires_at
@@ -215,12 +230,12 @@ export const desktopAuth = {
     if (!reset || new Date(reset.expires_at).getTime() < Date.now()) {
       throw new ApiError("O token local é inválido ou expirou.", 400);
     }
-    const credential = await createPasswordCredential(password);
+    const credential = await createArgon2Credential(password);
     await database.execute(
       `UPDATE users
-          SET password_hash = $1, password_salt = $2, updated_at = $3
+          SET password_hash = $1, password_salt = '', password_algorithm = $2, updated_at = $3
         WHERE id = $4`,
-      [credential.hash, credential.salt, new Date().toISOString(), reset.user_id],
+      [credential.hash, credential.algorithm, new Date().toISOString(), reset.user_id],
     );
     await database.execute("DELETE FROM password_reset_tokens WHERE user_id = $1", [reset.user_id]);
     clearLocalSession();
