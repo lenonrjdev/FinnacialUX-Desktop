@@ -232,6 +232,89 @@ fn escape_sql_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/").replace('\'', "''")
 }
 
+fn remove_sqlite_file_set(path: &Path) -> Result<(), String> {
+    for candidate in [
+        path.to_path_buf(),
+        PathBuf::from(format!("{}-wal", path.to_string_lossy())),
+        PathBuf::from(format!("{}-shm", path.to_string_lossy())),
+        PathBuf::from(format!("{}-journal", path.to_string_lossy())),
+    ] {
+        if candidate.exists() {
+            fs::remove_file(&candidate).map_err(|error| {
+                format!(
+                    "Não foi possível remover o arquivo temporário '{}': {error}",
+                    candidate.to_string_lossy()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn prepare_attach_destination(path: &Path) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "O caminho temporário do banco não possui uma pasta válida.".to_string())?;
+    fs::create_dir_all(parent).map_err(|error| {
+        format!(
+            "Não foi possível preparar a pasta local do banco '{}': {error}",
+            parent.to_string_lossy()
+        )
+    })?;
+
+    remove_sqlite_file_set(path)?;
+
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|error| {
+            format!(
+                "Não foi possível criar o banco temporário '{}': {error}",
+                path.to_string_lossy()
+            )
+        })?;
+    file.sync_all().map_err(|error| {
+        format!(
+            "Não foi possível confirmar o banco temporário '{}': {error}",
+            path.to_string_lossy()
+        )
+    })?;
+    drop(file);
+    Ok(())
+}
+
+fn cleanup_stale_migration_files(database: &Path) {
+    let Some(parent) = database.parent() else {
+        return;
+    };
+    let Some(file_name) = database.file_name().and_then(|value| value.to_str()) else {
+        return;
+    };
+    let prefixes = [
+        format!("{file_name}.encrypted-"),
+        format!("{file_name}.restore-"),
+    ];
+
+    let Ok(entries) = fs::read_dir(parent) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if prefixes.iter().any(|prefix| name.starts_with(prefix))
+            && (name.ends_with(".tmp")
+                || name.ends_with(".tmp-wal")
+                || name.ends_with(".tmp-shm")
+                || name.ends_with(".tmp-journal"))
+        {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
+
 async fn migrate_plaintext_database(
     app: &AppHandle,
     path: &Path,
@@ -242,9 +325,8 @@ async fn migrate_plaintext_database(
     let previous_staging = path.with_extension(format!("db.plaintext-{timestamp}.tmp"));
     let legacy_backup = backups_dir(app)?.join(format!("pre-encryption-{timestamp}.fuxlegacy"));
 
-    if encrypted_staging.exists() {
-        fs::remove_file(&encrypted_staging).map_err(to_error)?;
-    }
+    cleanup_stale_migration_files(path);
+    prepare_attach_destination(&encrypted_staging)?;
 
     let mut source = plaintext_options(path, false)
         .connect()
@@ -267,11 +349,23 @@ async fn migrate_plaintext_database(
         escape_sql_path(&encrypted_staging),
         raw_key_pragma(key),
     );
-    sqlx::raw_sql(&attach).execute(&mut source).await.map_err(to_error)?;
-    sqlx::query("SELECT sqlcipher_export('encrypted')")
+    if let Err(error) = sqlx::raw_sql(&attach).execute(&mut source).await {
+        let _ = source.close().await;
+        let _ = remove_sqlite_file_set(&encrypted_staging);
+        return Err(format!(
+            "Não foi possível abrir o banco criptografado temporário '{}': {error}",
+            encrypted_staging.to_string_lossy()
+        ));
+    }
+    if let Err(error) = sqlx::query("SELECT sqlcipher_export('encrypted')")
         .execute(&mut source)
         .await
-        .map_err(to_error)?;
+    {
+        let _ = sqlx::raw_sql("DETACH DATABASE encrypted;").execute(&mut source).await;
+        let _ = source.close().await;
+        let _ = remove_sqlite_file_set(&encrypted_staging);
+        return Err(format!("A conversão do banco para SQLCipher falhou: {error}"));
+    }
     sqlx::raw_sql(&format!("PRAGMA encrypted.user_version = {source_user_version};"))
         .execute(&mut source)
         .await
@@ -809,9 +903,7 @@ pub async fn export_plaintext_snapshot(
     state: &EncryptedDatabaseState,
     destination: &Path,
 ) -> Result<(), String> {
-    if destination.exists() {
-        fs::remove_file(destination).map_err(to_error)?;
-    }
+    prepare_attach_destination(destination)?;
     let mut connection = connect_app_database(app, state).await?;
     sqlx::raw_sql("PRAGMA wal_checkpoint(FULL);")
         .execute(&mut connection)
@@ -851,9 +943,8 @@ pub async fn replace_from_plaintext_snapshot(
     let timestamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
     let staged = database.with_extension(format!("db.restore-{timestamp}.tmp"));
     let previous = database.with_extension(format!("db.previous-{timestamp}.tmp"));
-    if staged.exists() {
-        fs::remove_file(&staged).map_err(to_error)?;
-    }
+    cleanup_stale_migration_files(&database);
+    prepare_attach_destination(&staged)?;
 
     let mut plaintext = plaintext_options(source, false).connect().await.map_err(to_error)?;
     let attach = format!(

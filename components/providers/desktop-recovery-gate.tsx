@@ -34,16 +34,48 @@ export function DesktopRecoveryGate({ children }: { children: React.ReactNode })
   const [backupPassword, setBackupPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [startupWarning, setStartupWarning] = useState("");
 
   useEffect(() => {
     if (!isDesktopRuntime()) {
       setChecking(false);
       return;
     }
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      if (!active) return;
+      setChecking(false);
+      setStartupWarning(
+        "A verificação de recuperação demorou mais que o esperado. O FinnacialUX continuou sem alterar seus dados.",
+      );
+    }, 6_000);
+
     void getRecoveryStatus()
-      .then((status) => setRecoveryRequired(status.previousUncleanShutdown))
-      .catch(() => setRecoveryRequired(false))
-      .finally(() => setChecking(false));
+      .then((status) => {
+        if (!active) return;
+        setRecoveryRequired(status.previousUncleanShutdown);
+        setStartupWarning("");
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setRecoveryRequired(false);
+        setStartupWarning(
+          caught instanceof Error
+            ? `A recuperação inicial não respondeu: ${caught.message}`
+            : "A recuperação inicial não respondeu. O aplicativo continuou sem alterar seus dados.",
+        );
+      })
+      .finally(() => {
+        if (!active) return;
+        window.clearTimeout(timeout);
+        setChecking(false);
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, []);
 
   async function resolveCredential(current: BackupHeader, password?: string) {
@@ -144,11 +176,28 @@ export function DesktopRecoveryGate({ children }: { children: React.ReactNode })
     }
   }
 
-  if (checking) {
-    return <div className="desktop-recovery-loading" aria-label="Verificando a inicialização do FinnacialUX" />;
+  if (!recoveryRequired) {
+    return (
+      <>
+        {children}
+        {checking ? (
+          <div className="desktop-startup-check" role="status" aria-live="polite">
+            <span className="desktop-startup-spinner" aria-hidden="true" />
+            <div>
+              <strong>Preparando o FinnacialUX</strong>
+              <small>Verificando a sessão local sem bloquear a interface.</small>
+            </div>
+          </div>
+        ) : null}
+        {startupWarning ? (
+          <div className="desktop-startup-warning" role="status">
+            <span>{startupWarning}</span>
+            <button type="button" onClick={() => setStartupWarning("")}>Fechar</button>
+          </div>
+        ) : null}
+      </>
+    );
   }
-
-  if (!recoveryRequired) return children;
 
   return (
     <main className="desktop-recovery-screen">

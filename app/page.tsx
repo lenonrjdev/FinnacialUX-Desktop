@@ -3,10 +3,26 @@
 import { useEffect } from "react";
 import { DashboardLoadingSkeleton } from "@/components/dashboard/dashboard-loading-skeleton";
 
+const immediateLoginRedirect = `
+(() => {
+  try {
+    if (window.location.pathname === "/" || window.location.pathname === "") {
+      window.location.replace("/login/");
+    }
+  } catch {}
+})();`;
+
 export default function HomePage() {
   useEffect(() => {
-    window.location.replace("/login/");
+    if (window.location.pathname === "/" || window.location.pathname === "") {
+      window.location.replace("/login/");
+    }
   }, []);
 
-  return <DashboardLoadingSkeleton variant="page" label="Abrindo o FinnacialUX Desktop..." />;
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: immediateLoginRedirect }} />
+      <DashboardLoadingSkeleton variant="page" label="Abrindo o FinnacialUX Desktop..." />
+    </>
+  );
 }

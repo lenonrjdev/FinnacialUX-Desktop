@@ -1,0 +1,3 @@
+src-tauri/src/encrypted_database.rs
+HOTFIX_4_0_6_BANCO_TEMPORARIO_SQLCIPHER.md
+HOTFIX_4_0_6_ARQUIVOS.txt

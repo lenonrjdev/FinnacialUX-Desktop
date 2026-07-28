@@ -5,6 +5,7 @@ import { DesktopProtectionProvider } from "@/components/providers/desktop-protec
 import { DesktopSecurityProvider } from "@/components/providers/desktop-security-provider";
 import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
+import { ClientErrorBoundary } from "@/components/providers/client-error-boundary";
 import { metadataContent } from "@/content/metadata";
 import "./globals.css";
 
@@ -47,15 +48,17 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: appearanceBootstrap }} />
       </head>
       <body>
-        <DesktopRecoveryGate>
-          <AuthProvider>
-            <DesktopSecurityProvider>
-              <DesktopProtectionProvider>
-                <AppRouteShell>{children}</AppRouteShell>
-              </DesktopProtectionProvider>
-            </DesktopSecurityProvider>
-          </AuthProvider>
-        </DesktopRecoveryGate>
+        <ClientErrorBoundary>
+          <DesktopRecoveryGate>
+            <AuthProvider>
+              <DesktopSecurityProvider>
+                <DesktopProtectionProvider>
+                  <AppRouteShell>{children}</AppRouteShell>
+                </DesktopProtectionProvider>
+              </DesktopSecurityProvider>
+            </AuthProvider>
+          </DesktopRecoveryGate>
+        </ClientErrorBoundary>
       </body>
     </html>
   );
