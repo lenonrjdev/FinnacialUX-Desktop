@@ -1,0 +1,46 @@
+name: Release FinnacialUX Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Instalar dependências nativas
+        shell: powershell
+        run: choco install strawberryperl nasm -y --no-progress
+      - name: Instalar dependências JavaScript
+        run: npm install
+      - name: Resolver versão da release
+        shell: powershell
+        run: |
+          $version = (Get-Content .\package.json -Raw | ConvertFrom-Json).version
+          "FINNACIALUX_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "FINNACIALUX_NOTES=releases/$version/RELEASE_NOTES.md" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Gerar release assinada
+        shell: powershell
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: .\scripts\05_GERAR_RELEASE.ps1 -Ci
+      - name: Publicar arquivos da release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/${{ env.FINNACIALUX_VERSION }}/*
+          body_path: ${{ env.FINNACIALUX_NOTES }}
+          make_latest: true

@@ -104,3 +104,18 @@ Leia também:
 - `docs/CRIPTOGRAFIA_BANCO_SQLCIPHER.md`;
 - `docs/ARQUITETURA_DESKTOP.md`;
 - `docs/CORE_REUSE_MANIFEST.md`.
+
+
+## Fase 5 — releases assinadas
+
+Para configurar o canal estável e gerar uma release atualizável:
+
+```powershell
+.\04_CONFIGURAR_ATUALIZACOES.cmd
+# opcional, quando houver certificado de editor instalado no Windows:
+.\07_CONFIGURAR_ASSINATURA_WINDOWS.cmd
+.\05_GERAR_RELEASE.cmd
+.\06_PUBLICAR_RELEASE_GITHUB.cmd
+```
+
+Use `03_GERAR_INSTALADOR.cmd` para testes locais e `03A_GERAR_INSTALADOR_OFFLINE.cmd` para uma instalação sem internet. Nunca envie a chave privada do updater junto do projeto.

@@ -8,6 +8,7 @@ import { NotificationsPanel } from "@/components/configuracoes/notifications-pan
 import { PreferencesPanel } from "@/components/configuracoes/preferences-panel";
 import { ProfileSettingsPanel } from "@/components/configuracoes/profile-settings-panel";
 import { SecurityPanel } from "@/components/configuracoes/security-panel";
+import { UpdatesPanel } from "@/components/configuracoes/updates-panel";
 import { SettingsHeading } from "@/components/configuracoes/settings-heading";
 import { SettingsNavigation } from "@/components/configuracoes/settings-navigation";
 import { SettingsSummary } from "@/components/configuracoes/settings-summary";
@@ -159,6 +160,15 @@ export default function ConfiguracoesView() {
   const [feedback, setFeedback] = useState("");
   const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(initialActivityLog);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const syncViewFromHash = () => {
+      if (window.location.hash === "#atualizacoes") setView("updates");
+    };
+    syncViewFromHash();
+    window.addEventListener("hashchange", syncViewFromHash);
+    return () => window.removeEventListener("hashchange", syncViewFromHash);
+  }, []);
 
   useEffect(() => {
     setPreferences({
@@ -385,10 +395,10 @@ export default function ConfiguracoesView() {
   async function removeBackup(snapshot: BackupSnapshot) {
     setBackupBusy(true);
     try {
-      const deleteFile = snapshot.kind === "automatic" || snapshot.kind === "pre_restore";
+      const deleteFile = snapshot.kind === "automatic" || snapshot.kind === "pre_restore" || snapshot.kind === "pre_update";
       await removeNativeBackup(snapshot.id, deleteFile);
       await refreshBackups();
-      showFeedback(deleteFile ? "Backup automático e registro removidos." : "Registro removido. O arquivo manual permanece no local escolhido.");
+      showFeedback(deleteFile ? "Arquivo protegido e registro de backup removidos." : "Registro removido. O arquivo manual permanece no local escolhido.");
     } catch (caught) {
       showFeedback(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -494,7 +504,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={view !== "updates" && view !== "diagnostics" && view !== "activity"} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -550,6 +560,13 @@ export default function ConfiguracoesView() {
         />
       ) : null}
       {view === "diagnostics" ? <DiagnosticsPanel onFeedback={showFeedback} /> : null}
+      {view === "updates" ? (
+        <UpdatesPanel
+          onConfirmInstall={() => desktopSecurity.confirmSensitiveAction("security")}
+          getBackupCredential={desktopSecurity.getDeviceBackupKey}
+          onFeedback={showFeedback}
+        />
+      ) : null}
 
       {feedback ? <div className="transaction-feedback settings-feedback" role="status"><CheckIcon /> {feedback}</div> : null}
     </div>

@@ -1,0 +1,53 @@
+FINNACIALUX DESKTOP — FASE 5
+INSTALADOR, ATUALIZAÇÕES E DISTRIBUIÇÃO
+VERSÃO 0.5.0
+
+PACOTE INCREMENTAL
+Aplique sobre o projeto estável da Fase 4 com o Hotfix 4.0.6.
+Extraia diretamente na raiz do projeto e permita substituir os arquivos.
+
+ARQUIVOS ADICIONADOS OU ALTERADOS (41)
+
+.github/workflows/release-desktop.yml
+.gitignore
+03A_GERAR_INSTALADOR_OFFLINE.cmd
+04_CONFIGURAR_ATUALIZACOES.cmd
+05_GERAR_RELEASE.cmd
+06_PUBLICAR_RELEASE_GITHUB.cmd
+07_CONFIGURAR_ASSINATURA_WINDOWS.cmd
+FASE_5_ARQUIVOS.txt
+FASE_5_DESKTOP_DISTRIBUICAO_ATUALIZACOES.md
+README.md
+app/globals.css
+app/layout.tsx
+components/configuracoes/backups-panel.tsx
+components/configuracoes/configuracoes-view.tsx
+components/configuracoes/settings-heading.tsx
+components/configuracoes/settings-navigation.tsx
+components/configuracoes/updates-panel.tsx
+components/providers/desktop-updater-provider.tsx
+content/configuracoes.ts
+docs/DISTRIBUICAO_E_ASSINATURAS.md
+lib/desktop/updater.ts
+package.json
+release/RELEASE_NOTES_0_5_0.md
+release/updater-config.json
+scripts/03_GERAR_INSTALADOR.ps1
+scripts/04_CONFIGURAR_ATUALIZACOES.ps1
+scripts/05_GERAR_RELEASE.ps1
+scripts/06_PUBLICAR_RELEASE_GITHUB.ps1
+scripts/07_CONFIGURAR_ASSINATURA_WINDOWS.ps1
+src-tauri/Cargo.toml
+src-tauri/capabilities/default.json
+src-tauri/src/lib.rs
+src-tauri/src/protection.rs
+src-tauri/tauri.conf.json
+src-tauri/tauri.offline.conf.json
+src-tauri/tauri.release.conf.json
+src-tauri/tauri.updater.conf.example.json
+src-tauri/tauri.windows-signing.conf.example.json
+types/configuracoes.ts
+types/desktop-protection.ts
+types/desktop-updater.ts
+
+Nenhuma chave privada, certificado, banco de dados, backup ou pasta de dados do usuário está incluído neste pacote.

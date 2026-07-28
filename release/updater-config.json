@@ -1,0 +1,7 @@
+{
+    "enabled":  true,
+    "channel":  "stable",
+    "repositoryUrl":  "https://github.com/lenonrjdev/FinnacialUX-Desktop",
+    "endpoint":  "https://github.com/lenonrjdev/FinnacialUX-Desktop/releases/latest/download/latest.json",
+    "configuredAt":  "2026-07-28T11:19:07.5916220Z"
+}

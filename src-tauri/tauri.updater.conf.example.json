@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "plugins": {
+    "updater": {
+      "pubkey": "COLE_AQUI_O_CONTEUDO_DA_CHAVE_PUBLICA",
+      "endpoints": [
+        "https://github.com/USUARIO/REPOSITORIO/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

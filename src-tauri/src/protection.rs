@@ -849,6 +849,56 @@ pub fn run_automatic_backup(
     })
 }
 
+async fn create_pre_update_backup_internal(
+    app: &AppHandle,
+    database: &EncryptedDatabaseState,
+    credential: String,
+) -> Result<BackupRecord, String> {
+    if credential.trim().is_empty() {
+        return Err("O cofre local não forneceu a chave necessária para o backup pré-atualização.".to_string());
+    }
+    let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
+    let destination = backups_dir(app)?.join(format!(
+        "FinnacialUX-pre-atualizacao-{timestamp}.{BACKUP_EXTENSION}"
+    ));
+    create_backup_internal(
+        app,
+        database,
+        destination,
+        "pre_update",
+        "device",
+        Some(credential.as_str()),
+    )
+    .await
+}
+
+#[tauri::command(async)]
+pub fn create_pre_update_backup(
+    app: AppHandle,
+    credential: String,
+) -> Result<BackupRecord, String> {
+    run_local_async_worker("finnacialux-pre-update-backup", move || async move {
+        let database = app.state::<EncryptedDatabaseState>();
+        create_pre_update_backup_internal(&app, &database, credential).await
+    })
+}
+
+#[tauri::command]
+pub fn prepare_for_update_exit(app: AppHandle) {
+    clear_session_marker(&app);
+    log::info!("update_exit_prepared");
+}
+
+#[tauri::command]
+pub fn resume_after_update_failure(
+    app: AppHandle,
+    recovery_state: State<'_, RecoveryState>,
+) -> Result<(), String> {
+    initialize_session_marker(&app, &recovery_state)?;
+    log::warn!("update_exit_cancelled session_marker_restored=true");
+    Ok(())
+}
+
 async fn list_backups_internal(
     app: &AppHandle,
     database: &EncryptedDatabaseState,
@@ -917,7 +967,7 @@ pub async fn remove_backup_record(
     if let Some(row) = row {
         let file_path: String = row.try_get("file_path").map_err(to_error)?;
         let kind: String = row.try_get("kind").map_err(to_error)?;
-        if delete_file && (kind == "automatic" || kind == "pre_restore") {
+        if delete_file && (kind == "automatic" || kind == "pre_restore" || kind == "pre_update") {
             let candidate = PathBuf::from(file_path);
             let allowed_directory = backups_dir(&app)?;
             if candidate.starts_with(&allowed_directory) && candidate.exists() {

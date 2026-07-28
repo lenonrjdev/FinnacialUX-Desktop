@@ -1,7 +1,15 @@
 import { CheckIcon, SaveIcon } from "@/components/shared/icons";
 import { settingsContent } from "@/content/configuracoes";
 
-export function SettingsHeading({ onSave, saving }: { onSave: () => void; saving: boolean }) {
+export function SettingsHeading({
+  onSave,
+  saving,
+  showSave = true,
+}: {
+  onSave: () => void;
+  saving: boolean;
+  showSave?: boolean;
+}) {
   return (
     <header className="financial-management-heading settings-heading">
       <div>
@@ -9,10 +17,12 @@ export function SettingsHeading({ onSave, saving }: { onSave: () => void; saving
         <h1>{settingsContent.heading.title}</h1>
         <p>{settingsContent.heading.description}</p>
       </div>
-      <button className="primary-action-button" type="button" onClick={onSave}>
-        {saving ? <CheckIcon /> : <SaveIcon />}
-        {saving ? settingsContent.heading.saved : settingsContent.heading.save}
-      </button>
+      {showSave ? (
+        <button className="primary-action-button" type="button" onClick={onSave}>
+          {saving ? <CheckIcon /> : <SaveIcon />}
+          {saving ? settingsContent.heading.saved : settingsContent.heading.save}
+        </button>
+      ) : null}
     </header>
   );
 }

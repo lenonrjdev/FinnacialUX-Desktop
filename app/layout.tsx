@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { DesktopProtectionProvider } from "@/components/providers/desktop-protection-provider";
 import { DesktopSecurityProvider } from "@/components/providers/desktop-security-provider";
+import { DesktopUpdaterProvider } from "@/components/providers/desktop-updater-provider";
 import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
 import { ClientErrorBoundary } from "@/components/providers/client-error-boundary";
@@ -53,7 +54,9 @@ export default function RootLayout({
             <AuthProvider>
               <DesktopSecurityProvider>
                 <DesktopProtectionProvider>
-                  <AppRouteShell>{children}</AppRouteShell>
+                  <DesktopUpdaterProvider>
+                    <AppRouteShell>{children}</AppRouteShell>
+                  </DesktopUpdaterProvider>
                 </DesktopProtectionProvider>
               </DesktopSecurityProvider>
             </AuthProvider>

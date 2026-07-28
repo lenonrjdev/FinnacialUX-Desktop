@@ -1,6 +1,6 @@
 import type { BackupFrequency } from "@/types/configuracoes";
 
-export type NativeBackupKind = "manual" | "automatic" | "pre_restore";
+export type NativeBackupKind = "manual" | "automatic" | "pre_restore" | "pre_update";
 export type NativeBackupStatus = "available" | "missing" | "failed";
 export type NativeIntegrityStatus = "ok" | "warning" | "failed";
 export type BackupEncryptionMode = "none" | "device" | "password";

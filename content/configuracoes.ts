@@ -14,6 +14,7 @@ export const settingsContent = {
     activity: "Histórico",
     backups: "Backups",
     diagnostics: "Diagnóstico",
+    updates: "Atualizações",
   },
   summary: {
     account: "Conta principal",

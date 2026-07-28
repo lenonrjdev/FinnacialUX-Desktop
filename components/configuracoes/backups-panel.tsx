@@ -85,6 +85,7 @@ export function BackupsPanel({
 
   const kindLabel = (snapshot: BackupSnapshot) => {
     if (snapshot.kind === "pre_restore") return "Pré-restauração";
+    if (snapshot.kind === "pre_update") return "Pré-atualização";
     return snapshot.automatic ? settingsContent.backups.automaticBadge : settingsContent.backups.manualBadge;
   };
 

@@ -5,7 +5,8 @@ export type SettingsView =
   | "security"
   | "activity"
   | "backups"
-  | "diagnostics";
+  | "diagnostics"
+  | "updates";
 
 export type AppearanceMode = "light" | "dark" | "system";
 export type DateFormat = "dd/MM/yyyy" | "MM/dd/yyyy" | "yyyy-MM-dd";
@@ -103,7 +104,7 @@ export type BackupSnapshot = {
   modulesCount: number;
   status: BackupStatus;
   automatic: boolean;
-  kind?: "manual" | "automatic" | "pre_restore";
+  kind?: "manual" | "automatic" | "pre_restore" | "pre_update";
   filePath?: string;
   integrityStatus?: "ok" | "warning" | "failed";
   checksumSha256?: string | null;

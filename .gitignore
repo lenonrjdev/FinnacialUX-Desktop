@@ -9,3 +9,10 @@ coverage/
 src-tauri/target/
 .DS_Store
 Thumbs.db
+
+# Fase 5 — segredos e artefatos locais de distribuição
+.release/
+releases/
+*.key
+*.key.pub
+TAURI_SIGNING_PRIVATE_KEY*

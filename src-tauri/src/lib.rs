@@ -47,6 +47,9 @@ pub fn run() {
             encrypted_database::encrypted_database_rekey,
             protection::create_manual_backup,
             protection::run_automatic_backup,
+            protection::create_pre_update_backup,
+            protection::prepare_for_update_exit,
+            protection::resume_after_update_failure,
             protection::list_backups,
             protection::remove_backup_record,
             protection::inspect_backup_header,
@@ -83,6 +86,9 @@ pub fn run() {
             app.handle().plugin(
                 tauri_plugin_stronghold::Builder::with_argon2(&stronghold_salt).build(),
             )?;
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
 
             let state = app.state::<RecoveryState>();
             initialize_session_marker(app.handle(), &state)

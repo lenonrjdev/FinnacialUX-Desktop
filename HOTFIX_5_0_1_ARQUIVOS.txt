@@ -1,0 +1,3 @@
+src-tauri/tauri.conf.json
+HOTFIX_5_0_1_UPDATER_CONFIG_DESENVOLVIMENTO.md
+HOTFIX_5_0_1_ARQUIVOS.txt

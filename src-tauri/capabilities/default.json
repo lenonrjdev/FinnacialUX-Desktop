@@ -9,6 +9,7 @@
     "core:default",
     "dialog:default",
     "log:default",
-    "stronghold:default"
+    "stronghold:default",
+    "updater:default"
   ]
 }
