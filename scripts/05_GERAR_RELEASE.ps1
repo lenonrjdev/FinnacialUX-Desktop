@@ -26,275 +26,6 @@ function Convert-SecureStringToPlainText([Security.SecureString]$Value) {
   }
 }
 
-function Write-Utf8NoBom([string]$Path, [string]$Content) {
-  $Encoding = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::WriteAllText($Path, $Content, $Encoding)
-}
-
-function Write-Stage([string]$Message) {
-  Write-Host "`n==> $Message" -ForegroundColor Cyan
-}
-
-function Get-ReleaseInstaller([string]$NsisDirectory, [string]$ReleaseVersion) {
-  Write-Stage "Localizando instalador NSIS e assinatura"
-
-  if (-not (Test-Path $NsisDirectory)) {
-    throw "Pasta NSIS nao encontrada: $NsisDirectory"
-  }
-
-  $VersionPattern = "*_$ReleaseVersion`_x64-setup.exe"
-  $Installer = Get-ChildItem $NsisDirectory -File -Filter $VersionPattern |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1
-
-  if (-not $Installer) {
-    $Installer = Get-ChildItem $NsisDirectory -File -Filter "*.exe" |
-      Sort-Object LastWriteTime -Descending |
-      Select-Object -First 1
-  }
-
-  if (-not $Installer) {
-    throw "Instalador NSIS nao encontrado em $NsisDirectory"
-  }
-
-  $SignatureSource = "$($Installer.FullName).sig"
-  if (-not (Test-Path $SignatureSource)) {
-    throw "Assinatura do updater nao encontrada: $SignatureSource"
-  }
-
-  $Installer.Refresh()
-  if ($Installer.Length -le 0) {
-    throw "O instalador NSIS esta vazio: $($Installer.FullName)"
-  }
-
-  Write-Host "Instalador: $($Installer.FullName)" -ForegroundColor Green
-  Write-Host "Tamanho: $([Math]::Round($Installer.Length / 1MB, 2)) MB"
-  Write-Host "Assinatura: $SignatureSource" -ForegroundColor Green
-
-  return [pscustomobject]@{
-    Installer = $Installer
-    Signature = $SignatureSource
-  }
-}
-
-function Remove-FileIfExists([string]$Path) {
-  if (Test-Path $Path) {
-    Remove-Item $Path -Force -ErrorAction Stop
-  }
-}
-
-function Copy-FileAtomicWithProgress(
-  [string]$Source,
-  [string]$Destination,
-  [string]$Label
-) {
-  $Partial = "$Destination.partial"
-  Remove-FileIfExists $Partial
-
-  $SourceStream = $null
-  $DestinationStream = $null
-  try {
-    $SourceStream = New-Object System.IO.FileStream(
-      $Source,
-      [System.IO.FileMode]::Open,
-      [System.IO.FileAccess]::Read,
-      [System.IO.FileShare]::ReadWrite
-    )
-
-    $DestinationStream = New-Object System.IO.FileStream(
-      $Partial,
-      [System.IO.FileMode]::Create,
-      [System.IO.FileAccess]::Write,
-      [System.IO.FileShare]::None
-    )
-
-    $Total = $SourceStream.Length
-    if ($Total -le 0) {
-      throw "O arquivo de origem esta vazio: $Source"
-    }
-
-    $Buffer = New-Object byte[] (4MB)
-    $Copied = [int64]0
-    $LastPercent = -1
-
-    while (($Read = $SourceStream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {
-      $DestinationStream.Write($Buffer, 0, $Read)
-      $Copied += $Read
-      $Percent = [Math]::Min(100, [int](($Copied * 100) / $Total))
-
-      if ($Percent -ge ($LastPercent + 5) -or $Percent -eq 100) {
-        Write-Progress -Activity $Label -Status "$Percent%" -PercentComplete $Percent
-        Write-Host ("  {0}% ({1:N2} MB de {2:N2} MB)" -f $Percent, ($Copied / 1MB), ($Total / 1MB))
-        $LastPercent = $Percent
-      }
-    }
-
-    $DestinationStream.Flush()
-  }
-  finally {
-    if ($DestinationStream) { $DestinationStream.Dispose() }
-    if ($SourceStream) { $SourceStream.Dispose() }
-    Write-Progress -Activity $Label -Completed
-  }
-
-  Remove-FileIfExists $Destination
-  Move-Item $Partial $Destination -Force
-}
-
-function Get-Sha256WithProgress([string]$Path) {
-  $Stream = $null
-  $Sha = $null
-  try {
-    $Stream = New-Object System.IO.FileStream(
-      $Path,
-      [System.IO.FileMode]::Open,
-      [System.IO.FileAccess]::Read,
-      [System.IO.FileShare]::Read
-    )
-    $Sha = [System.Security.Cryptography.SHA256]::Create()
-    $Buffer = New-Object byte[] (4MB)
-    $Total = $Stream.Length
-    $Processed = [int64]0
-    $LastPercent = -1
-
-    while (($Read = $Stream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {
-      [void]$Sha.TransformBlock($Buffer, 0, $Read, $Buffer, 0)
-      $Processed += $Read
-      $Percent = if ($Total -gt 0) { [Math]::Min(100, [int](($Processed * 100) / $Total)) } else { 100 }
-      if ($Percent -ge ($LastPercent + 10) -or $Percent -eq 100) {
-        Write-Progress -Activity "Calculando SHA-256" -Status "$Percent%" -PercentComplete $Percent
-        $LastPercent = $Percent
-      }
-    }
-
-    [void]$Sha.TransformFinalBlock((New-Object byte[] 0), 0, 0)
-    return ([BitConverter]::ToString($Sha.Hash)).Replace('-', '').ToLowerInvariant()
-  }
-  finally {
-    if ($Sha) { $Sha.Dispose() }
-    if ($Stream) { $Stream.Dispose() }
-    Write-Progress -Activity "Calculando SHA-256" -Completed
-  }
-}
-
-function Finalize-Release(
-  [string]$ReleaseVersion,
-  [string]$Repository,
-  [string]$ReleaseNotesFile
-) {
-  $CurrentStage = "inicio"
-  try {
-    $CurrentStage = "localizacao dos artefatos"
-    $Nsis = Join-Path $Root "src-tauri\target\release\bundle\nsis"
-    $Artifacts = Get-ReleaseInstaller -NsisDirectory $Nsis -ReleaseVersion $ReleaseVersion
-
-    $CurrentStage = "preparacao da pasta final"
-    Write-Stage "Preparando pasta da release"
-    $ReleaseDir = Join-Path $Root "releases\$ReleaseVersion"
-    New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
-
-    $AssetName = "FinnacialUX-Desktop_${ReleaseVersion}_x64-setup.exe"
-    $AssetPath = Join-Path $ReleaseDir $AssetName
-    $SignaturePath = "$AssetPath.sig"
-
-    @(
-      $AssetPath,
-      $SignaturePath,
-      "$AssetPath.partial",
-      "$SignaturePath.partial",
-      (Join-Path $ReleaseDir "latest.json"),
-      (Join-Path $ReleaseDir "SHA256SUMS.txt"),
-      (Join-Path $ReleaseDir "release-manifest.json"),
-      (Join-Path $ReleaseDir "RELEASE_NOTES.md")
-    ) | ForEach-Object { Remove-FileIfExists $_ }
-
-    $CurrentStage = "copia do instalador"
-    Write-Stage "Copiando instalador para a pasta final"
-    Copy-FileAtomicWithProgress -Source $Artifacts.Installer.FullName -Destination $AssetPath -Label "Copiando instalador"
-
-    $CurrentStage = "copia da assinatura"
-    Write-Stage "Copiando assinatura do updater"
-    Copy-FileAtomicWithProgress -Source $Artifacts.Signature -Destination $SignaturePath -Label "Copiando assinatura"
-
-    $CurrentStage = "leitura da assinatura"
-    $Tag = "desktop-v$ReleaseVersion"
-    $DownloadUrl = "https://github.com/$Repository/releases/download/$Tag/$AssetName"
-    $Signature = (Get-Content $SignaturePath -Raw).Trim()
-    if ([string]::IsNullOrWhiteSpace($Signature)) {
-      throw "O arquivo de assinatura esta vazio: $SignaturePath"
-    }
-
-    $CurrentStage = "geracao do latest.json"
-    Write-Stage "Gerando latest.json"
-    $Notes = Get-Content $ReleaseNotesFile -Raw
-    $Latest = [ordered]@{
-      version = $ReleaseVersion
-      notes = $Notes
-      pub_date = [DateTime]::UtcNow.ToString("o")
-      platforms = [ordered]@{
-        'windows-x86_64' = [ordered]@{
-          signature = $Signature
-          url = $DownloadUrl
-        }
-      }
-    }
-    Write-Utf8NoBom (Join-Path $ReleaseDir "latest.json") (($Latest | ConvertTo-Json -Depth 8) + "`n")
-
-    $CurrentStage = "calculo do SHA-256"
-    Write-Stage "Calculando SHA-256 do instalador"
-    $Hash = Get-Sha256WithProgress $AssetPath
-    Write-Utf8NoBom (Join-Path $ReleaseDir "SHA256SUMS.txt") "$Hash  $AssetName`n"
-
-    $CurrentStage = "geracao do manifesto"
-    Write-Stage "Gerando manifesto tecnico"
-    $Manifest = [ordered]@{
-      product = "FinnacialUX Desktop"
-      version = $ReleaseVersion
-      tag = $Tag
-      repository = $Repository
-      installer = $AssetName
-      updaterSignature = "$AssetName.sig"
-      updaterManifest = "latest.json"
-      sha256 = $Hash
-      generatedAt = [DateTime]::UtcNow.ToString("o")
-    }
-    Write-Utf8NoBom (Join-Path $ReleaseDir "release-manifest.json") (($Manifest | ConvertTo-Json -Depth 6) + "`n")
-
-    $CurrentStage = "copia das notas"
-    Write-Stage "Copiando notas da versao"
-    Copy-Item $ReleaseNotesFile (Join-Path $ReleaseDir "RELEASE_NOTES.md") -Force
-
-    $CurrentStage = "validacao final"
-    $Required = @(
-      $AssetName,
-      "$AssetName.sig",
-      "latest.json",
-      "SHA256SUMS.txt",
-      "release-manifest.json",
-      "RELEASE_NOTES.md"
-    )
-    foreach ($Name in $Required) {
-      $Path = Join-Path $ReleaseDir $Name
-      if (-not (Test-Path $Path)) {
-        throw "Arquivo final ausente: $Path"
-      }
-      if ((Get-Item $Path).Length -le 0) {
-        throw "Arquivo final vazio: $Path"
-      }
-    }
-
-    Write-Host "`nRelease preparada com sucesso:" -ForegroundColor Green
-    Write-Host $ReleaseDir
-    Get-ChildItem $ReleaseDir | Sort-Object Name | ForEach-Object {
-      Write-Host " - $($_.Name)"
-    }
-    Write-Host "`nNenhuma chave privada foi copiada para a pasta da release." -ForegroundColor Green
-  }
-  catch {
-    throw "Falha durante a etapa '$CurrentStage': $($_.Exception.Message)"
-  }
-}
-
 if (-not (Test-Path ".\node_modules")) {
   throw "Execute primeiro .\01_CONFIGURAR_DESKTOP.cmd"
 }
@@ -303,6 +34,9 @@ if (-not (Test-Path ".\src-tauri\tauri.updater.conf.json")) {
 }
 if (-not (Test-Path ".\src-tauri\tauri.release.conf.json")) {
   throw "Configuracao de release ausente: src-tauri\tauri.release.conf.json"
+}
+if (-not (Test-Path ".\scripts\finalize-release.mjs")) {
+  throw "Finalizador Node.js ausente: scripts\finalize-release.mjs"
 }
 
 $Package = Read-Json ".\package.json"
@@ -399,21 +133,27 @@ try {
       Write-Host "Assinatura de editor do Windows: nao configurada (updater continua assinado)" -ForegroundColor Yellow
     }
 
-    # Executa a CLI diretamente. Isto evita o processo npm intermediario que pode
-    # permanecer aberto no Windows mesmo depois de o Tauri concluir o bundle.
     & $TauriCli @BuildArguments
     if ($LASTEXITCODE -ne 0) {
       throw "O build da release falhou."
     }
 
-    Write-Host "`nBuild concluido. Organizando os artefatos da release..." -ForegroundColor Cyan
+    Write-Host "`nBuild concluido. A finalizacao sera feita pelo Node.js para evitar travamentos do ConvertTo-Json no Windows PowerShell." -ForegroundColor Cyan
   }
   else {
     Write-Host "FINNACIALUX DESKTOP - FINALIZANDO RELEASE EXISTENTE $Version" -ForegroundColor Cyan
-    Write-Host "O instalador e o arquivo .sig existentes serao reutilizados; nenhum novo build sera executado." -ForegroundColor Yellow
   }
 
-  Finalize-Release -ReleaseVersion $Version -Repository $RepositoryFull -ReleaseNotesFile $NotesFile
+  $FinalizerArguments = @(
+    ".\scripts\finalize-release.mjs",
+    "--version", $Version,
+    "--notes", $NotesFile
+  )
+
+  & node @FinalizerArguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "A finalizacao Node.js da release falhou com codigo $LASTEXITCODE."
+  }
 }
 finally {
   if (-not $PrivateKeyWasSet) {
