@@ -4,6 +4,7 @@ import type { IconProps } from "@/components/shared/icons";
 import {
   AccountsIcon,
   BillsIcon,
+  BookIcon,
   BudgetIcon,
   CalendarIcon,
   CreditCardIcon,
@@ -35,6 +36,7 @@ const icons: Record<NavigationIconName, ComponentType<IconProps>> = {
   "data-tools": DatabaseIcon,
   access: UsersIcon,
   settings: SettingsIcon,
+  help: BookIcon,
 };
 
 export function NavigationIcon({ name }: { name: NavigationIconName }) {

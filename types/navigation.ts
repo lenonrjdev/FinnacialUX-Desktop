@@ -13,7 +13,8 @@ export type NavigationIconName =
   | "reports"
   | "data-tools"
   | "access"
-  | "settings";
+  | "settings"
+  | "help";
 
 export type NavigationItem = {
   label: string;

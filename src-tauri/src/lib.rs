@@ -5,8 +5,74 @@ mod security;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
-use tauri::{Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent};
 use tauri_plugin_log::{Target, TargetKind};
+
+#[cfg(desktop)]
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+};
+
+#[cfg(desktop)]
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+#[cfg(desktop)]
+fn setup_system_tray(app: &mut tauri::App) -> tauri::Result<()> {
+    let open_item = MenuItem::with_id(app, "open", "Abrir FinnacialUX", true, None::<&str>)?;
+    let lock_item = MenuItem::with_id(app, "lock", "Bloquear aplicativo", true, None::<&str>)?;
+    let backup_item = MenuItem::with_id(app, "backup", "Criar backup", true, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Encerrar FinnacialUX", true, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[&open_item, &lock_item, &backup_item, &separator, &quit_item],
+    )?;
+
+    let mut builder = TrayIconBuilder::new()
+        .tooltip("FinnacialUX Desktop")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_main_window(app),
+            "lock" => {
+                show_main_window(app);
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("finnacialux-lock-requested-native", ());
+                }
+            }
+            "backup" => {
+                show_main_window(app);
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("finnacialux-backup-requested-native", ());
+                }
+            }
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+    builder.build(app)?;
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -17,15 +83,18 @@ pub fn run() {
         .manage(database_state);
 
     #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_single_instance::init(
-        |app, _arguments, _working_directory| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        },
-    ));
+    let builder = builder
+        .plugin(tauri_plugin_single_instance::init(
+            |app, _arguments, _working_directory| {
+                show_main_window(app);
+            },
+        ))
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ));
 
     let log_plugin = tauri_plugin_log::Builder::new()
         .clear_targets()
@@ -87,8 +156,11 @@ pub fn run() {
                 tauri_plugin_stronghold::Builder::with_argon2(&stronghold_salt).build(),
             )?;
             #[cfg(desktop)]
-            app.handle()
-                .plugin(tauri_plugin_updater::Builder::new().build())?;
+            {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+                setup_system_tray(app)?;
+            }
 
             let state = app.state::<RecoveryState>();
             initialize_session_marker(app.handle(), &state)

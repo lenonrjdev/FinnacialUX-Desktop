@@ -6,6 +6,8 @@ export type SettingsView =
   | "activity"
   | "backups"
   | "diagnostics"
+  | "desktop"
+  | "accessibility"
   | "updates";
 
 export type AppearanceMode = "light" | "dark" | "system";

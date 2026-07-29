@@ -1,8 +1,9 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLCipher. A versão `0.4.0` inclui criptografia integral do
-banco local, Stronghold, Argon2id, PIN, backups criptografados e diagnóstico.
+React, TypeScript e SQLCipher. A versão `0.6.0` reúne criptografia integral do
+banco local, Stronghold, Argon2id, PIN, backups criptografados, atualizações
+assinadas, integração nativa com o Windows e recursos de acessibilidade.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -99,9 +100,12 @@ Leia também:
 - `FASE_2_DESKTOP_PROTECAO_DADOS.md`;
 - `FASE_3_DESKTOP_SEGURANCA_LOCAL.md`;
 - `FASE_4_DESKTOP_BANCO_SQLCIPHER.md`;
+- `FASE_5_DESKTOP_DISTRIBUICAO_ATUALIZACOES.md`;
+- `FASE_6_DESKTOP_EXPERIENCIA_ACESSIBILIDADE.md`;
 - `docs/OPERACAO_BACKUP_RECUPERACAO.md`;
 - `docs/SEGURANCA_LOCAL.md`;
 - `docs/CRIPTOGRAFIA_BANCO_SQLCIPHER.md`;
+- `docs/EXPERIENCIA_DESKTOP_ACESSIBILIDADE.md`;
 - `docs/ARQUITETURA_DESKTOP.md`;
 - `docs/CORE_REUSE_MANIFEST.md`.
 
@@ -119,3 +123,15 @@ Para configurar o canal estável e gerar uma release atualizável:
 ```
 
 Use `03_GERAR_INSTALADOR.cmd` para testes locais e `03A_GERAR_INSTALADOR_OFFLINE.cmd` para uma instalação sem internet. Nunca envie a chave privada do updater junto do projeto.
+
+
+## Fase 6 — experiência nativa e acessibilidade
+
+A versão `0.6.0` adiciona estado persistente da janela, bandeja do sistema,
+inicialização opcional com o Windows, notificações nativas, central de comandos,
+atalhos, métricas locais, ajuda interna e preferências de acessibilidade.
+
+Acesse **Configurações → Desktop**, **Configurações → Acessibilidade** ou pressione
+`F1` para abrir a nova área de ajuda. Para encerrar completamente quando
+“Fechar para a bandeja” estiver ativo, use o item **Encerrar FinnacialUX** no
+menu do ícone próximo ao relógio do Windows.

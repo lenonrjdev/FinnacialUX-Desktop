@@ -1,0 +1,3 @@
+src-tauri/capabilities/default.json
+HOTFIX_6_0_1_FECHAMENTO_JANELA.md
+HOTFIX_6_0_1_ARQUIVOS.txt

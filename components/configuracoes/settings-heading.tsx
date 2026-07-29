@@ -18,7 +18,7 @@ export function SettingsHeading({
         <p>{settingsContent.heading.description}</p>
       </div>
       {showSave ? (
-        <button className="primary-action-button" type="button" onClick={onSave}>
+        <button className="primary-action-button" data-desktop-save type="button" onClick={onSave}>
           {saving ? <CheckIcon /> : <SaveIcon />}
           {saving ? settingsContent.heading.saved : settingsContent.heading.save}
         </button>

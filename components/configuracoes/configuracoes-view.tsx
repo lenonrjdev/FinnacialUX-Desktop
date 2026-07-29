@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
+import { DesktopExperiencePanel } from "@/components/configuracoes/desktop-experience-panel";
+import { AccessibilityPanel } from "@/components/configuracoes/accessibility-panel";
 import { NotificationsPanel } from "@/components/configuracoes/notifications-panel";
 import { PreferencesPanel } from "@/components/configuracoes/preferences-panel";
 import { ProfileSettingsPanel } from "@/components/configuracoes/profile-settings-panel";
@@ -161,9 +163,29 @@ export default function ConfiguracoesView() {
   const [activityEntries, setActivityEntries] = useState<ActivityLogEntry[]>(initialActivityLog);
   const [saving, setSaving] = useState(false);
 
+  const changeSettingsView = (next: SettingsView) => {
+    setView(next);
+    const hashes: Partial<Record<SettingsView, string>> = {
+      security: "seguranca",
+      backups: "backups",
+      diagnostics: "diagnostico",
+      desktop: "desktop",
+      accessibility: "acessibilidade",
+      updates: "atualizacoes",
+    };
+    const hash = hashes[next];
+    window.history.replaceState(null, "", hash ? `#${hash}` : window.location.pathname);
+  };
+
   useEffect(() => {
     const syncViewFromHash = () => {
-      if (window.location.hash === "#atualizacoes") setView("updates");
+      const hash = window.location.hash;
+      if (hash === "#atualizacoes") setView("updates");
+      else if (hash === "#desktop") setView("desktop");
+      else if (hash === "#acessibilidade") setView("accessibility");
+      else if (hash === "#diagnostico") setView("diagnostics");
+      else if (hash === "#seguranca") setView("security");
+      else if (hash === "#backups") setView("backups");
     };
     syncViewFromHash();
     window.addEventListener("hashchange", syncViewFromHash);
@@ -504,7 +526,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={view !== "updates" && view !== "diagnostics" && view !== "activity"} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -513,7 +535,7 @@ export default function ConfiguracoesView() {
         backupsCount={availableBackupsCount}
       />
 
-      <SettingsNavigation value={view} onChange={setView} />
+      <SettingsNavigation value={view} onChange={changeSettingsView} />
 
       {view === "profile" ? <ProfileSettingsPanel value={profile} onChange={setProfile} /> : null}
       {view === "preferences" ? <PreferencesPanel value={preferences} accounts={accounts} onChange={changePreferences} /> : null}
@@ -560,6 +582,8 @@ export default function ConfiguracoesView() {
         />
       ) : null}
       {view === "diagnostics" ? <DiagnosticsPanel onFeedback={showFeedback} /> : null}
+      {view === "desktop" ? <DesktopExperiencePanel /> : null}
+      {view === "accessibility" ? <AccessibilityPanel /> : null}
       {view === "updates" ? (
         <UpdatesPanel
           onConfirmInstall={() => desktopSecurity.confirmSensitiveAction("security")}

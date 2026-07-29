@@ -2,7 +2,9 @@ import {
   ArchiveIcon,
   BellIcon,
   DatabaseIcon,
+  EyeIcon,
   HistoryIcon,
+  MonitorIcon,
   PaletteIcon,
   RefreshIcon,
   ShieldIcon,
@@ -19,6 +21,8 @@ const navigation: Array<{ key: SettingsView; icon: React.ReactNode }> = [
   { key: "activity", icon: <HistoryIcon /> },
   { key: "backups", icon: <ArchiveIcon /> },
   { key: "diagnostics", icon: <DatabaseIcon /> },
+  { key: "desktop", icon: <MonitorIcon /> },
+  { key: "accessibility", icon: <EyeIcon /> },
   { key: "updates", icon: <RefreshIcon /> },
 ];
 

@@ -7,10 +7,11 @@ import { Brand } from "@/components/dashboard/brand";
 import { DashboardLoadingSkeleton } from "@/components/dashboard/dashboard-loading-skeleton";
 import { NavigationIcon } from "@/components/dashboard/navigation-icon";
 import { UserMenu } from "@/components/dashboard/user-menu";
+import { useDesktopExperience } from "@/components/providers/desktop-experience-provider";
 import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
 import { useAuth } from "@/components/providers/auth-provider";
 import { FinanceDataProvider } from "@/components/providers/finance-data-provider";
-import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, ShieldIcon, SunIcon } from "@/components/shared/icons";
+import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, SearchIcon, ShieldIcon, SunIcon } from "@/components/shared/icons";
 import { accessContent } from "@/content/acessos";
 import { dashboardContent, dashboardNavigation } from "@/content/dashboard";
 import { integrationContent } from "@/content/integracao";
@@ -46,6 +47,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 function DashboardShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, workspaces, loading, error, refreshSession } = useAuth();
+  const { openCommandPalette } = useDesktopExperience();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [displayUser, setDisplayUser] = useState<SessionUser | null>(null);
@@ -234,6 +236,16 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
               <Link className="new-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon />{dashboardContent.topbar.newEntry}</Link>
             )}
             <button
+              className="icon-button desktop-command-trigger"
+              type="button"
+              aria-label="Abrir central de comandos"
+              title="Central de comandos (Ctrl + K)"
+              onClick={() => openCommandPalette()}
+            >
+              <SearchIcon />
+              <kbd>Ctrl K</kbd>
+            </button>
+            <button
               className="icon-button theme-toggle-button"
               type="button"
               aria-label={resolvedAppearance === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
@@ -255,6 +267,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
           <Brand />
           <div className="mobile-header-actions">
             {!effectiveReadOnly ? <Link className="mobile-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon /><span>{dashboardContent.topbar.mobileNewEntry}</span></Link> : null}
+            <button className="icon-button" type="button" aria-label="Abrir central de comandos" onClick={() => openCommandPalette()}><SearchIcon /></button>
             <button
               className="icon-button theme-toggle-button"
               type="button"
@@ -293,7 +306,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
         <FinanceDataProvider workspaceId={selectedWorkspace.id} readOnly={effectiveReadOnly}>
-          <main className="page-content finance-page-content">{children}</main>
+          <main id="conteudo-principal" tabIndex={-1} className="page-content finance-page-content">{children}</main>
         </FinanceDataProvider>
         <footer className="footer finance-footer">
           <span>{dashboardContent.footer.copyright}</span>

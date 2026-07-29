@@ -1,5 +1,5 @@
 export const metadataContent = {
   title: "FinnacialUX Desktop | Controle financeiro offline",
   description:
-    "Aplicativo desktop offline para organizar contas, recebimentos, cartões, metas e despesas com banco SQLite local.",
+    "Aplicativo financeiro offline com banco SQLCipher, backups criptografados, experiência nativa do Windows e recursos de acessibilidade.",
 } as const;

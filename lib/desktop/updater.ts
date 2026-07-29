@@ -88,7 +88,7 @@ function endpointHost(endpoint: string): string {
 export async function getDesktopUpdaterStatus(): Promise<DesktopUpdaterStatus> {
   const config = getConfig();
   return {
-    currentVersion: isDesktopRuntime() ? await getVersion() : "0.5.0",
+    currentVersion: isDesktopRuntime() ? await getVersion() : "0.6.0",
     configured: config.enabled && config.endpoint.startsWith("https://"),
     developmentBuild: isDesktopDevelopmentBuild(),
     channel: "stable",
@@ -201,9 +201,13 @@ export async function installDesktopUpdate(
       percent: 100,
       message: "Download validado. O instalador está sendo iniciado...",
     });
+    window.dispatchEvent(new Event("finnacialux-force-exit"));
     await update.install();
   } catch (caught) {
-    if (exitPrepared) await invoke("resume_after_update_failure").catch(() => undefined);
+    if (exitPrepared) {
+      await invoke("resume_after_update_failure").catch(() => undefined);
+      window.dispatchEvent(new Event("finnacialux-update-install-failed"));
+    }
     const message = caught instanceof Error ? caught.message : String(caught);
     onProgress({
       phase: "failed",

@@ -14,6 +14,8 @@ export const settingsContent = {
     activity: "Histórico",
     backups: "Backups",
     diagnostics: "Diagnóstico",
+    desktop: "Desktop",
+    accessibility: "Acessibilidade",
     updates: "Atualizações",
   },
   summary: {

@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { DesktopProtectionProvider } from "@/components/providers/desktop-protection-provider";
 import { DesktopSecurityProvider } from "@/components/providers/desktop-security-provider";
 import { DesktopUpdaterProvider } from "@/components/providers/desktop-updater-provider";
+import { DesktopExperienceProvider } from "@/components/providers/desktop-experience-provider";
 import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
 import { ClientErrorBoundary } from "@/components/providers/client-error-boundary";
@@ -32,6 +33,13 @@ const appearanceBootstrap = `
     document.documentElement.dataset.theme = resolved;
     document.documentElement.dataset.appearancePreference = preference;
     document.documentElement.style.colorScheme = resolved;
+    const desktop = JSON.parse(window.localStorage.getItem("finnacialux-desktop-experience-v1") || "{}");
+    document.documentElement.dataset.reduceMotion = desktop.reduceMotion === true ? "true" : "false";
+    document.documentElement.dataset.highContrast = desktop.highContrast === true ? "true" : "false";
+    document.documentElement.dataset.enhancedFocus = desktop.enhancedFocus === false ? "false" : "true";
+    document.documentElement.dataset.compactInterface = desktop.compactInterface === true ? "true" : "false";
+    const scale = [90, 100, 110, 120].includes(Number(desktop.textScale)) ? Number(desktop.textScale) : 100;
+    document.documentElement.style.setProperty("--desktop-text-scale", String(scale / 100));
   } catch {
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.documentElement.dataset.theme = systemDark ? "dark" : "light";
@@ -55,7 +63,9 @@ export default function RootLayout({
               <DesktopSecurityProvider>
                 <DesktopProtectionProvider>
                   <DesktopUpdaterProvider>
-                    <AppRouteShell>{children}</AppRouteShell>
+                    <DesktopExperienceProvider>
+                      <AppRouteShell>{children}</AppRouteShell>
+                    </DesktopExperienceProvider>
                   </DesktopUpdaterProvider>
                 </DesktopProtectionProvider>
               </DesktopSecurityProvider>

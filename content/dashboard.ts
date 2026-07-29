@@ -34,6 +34,7 @@ export const dashboardNavigation: NavigationGroup[] = [
     items: [
       { label: "Pessoas e acessos", href: "/acessos", icon: "access" },
       { label: "Configurações", href: "/configuracoes", icon: "settings" },
+      { label: "Ajuda", href: "/ajuda", icon: "help" },
     ],
   },
 ];
