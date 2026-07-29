@@ -1,0 +1,4 @@
+components/providers/desktop-experience-provider.tsx
+app/globals.css
+HOTFIX_6_0_2_NAVEGACAO_SEM_PISCAR.md
+HOTFIX_6_0_2_ARQUIVOS.txt

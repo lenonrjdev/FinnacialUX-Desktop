@@ -60,7 +60,6 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands");
   const [notice, setNotice] = useState<DesktopExperienceNotice | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
-  const [routeBusy, setRouteBusy] = useState(false);
   const [performance, setPerformance] = useState<DesktopPerformanceSnapshot | null>(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const noticeTimer = useRef<number | null>(null);
@@ -182,24 +181,6 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
     window.addEventListener("keydown", handleShortcut, true);
     return () => window.removeEventListener("keydown", handleShortcut, true);
   }, [createQuickBackup, desktopSecurity, openCommandPalette, router]);
-
-  useEffect(() => {
-    const handleNavigationStart = (event: MouseEvent) => {
-      const anchor = (event.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
-      if (!anchor || anchor.target === "_blank" || event.defaultPrevented) return;
-      const destination = new URL(anchor.href, window.location.href);
-      if (destination.origin !== window.location.origin || destination.pathname === window.location.pathname) return;
-      setRouteBusy(true);
-      window.setTimeout(() => setRouteBusy(false), 1500);
-    };
-    const handlePageShow = () => setRouteBusy(false);
-    document.addEventListener("click", handleNavigationStart, true);
-    window.addEventListener("pageshow", handlePageShow);
-    return () => {
-      document.removeEventListener("click", handleNavigationStart, true);
-      window.removeEventListener("pageshow", handlePageShow);
-    };
-  }, []);
 
   useEffect(() => {
     if (!hasTauriRuntime()) return;
@@ -340,7 +321,6 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
   return (
     <DesktopExperienceContext.Provider value={value}>
       <a className="desktop-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
-      {routeBusy ? <div className="desktop-route-progress" role="progressbar" aria-label="Carregando página" /> : null}
       {children}
       <DesktopCommandPalette
         open={paletteOpen}
