@@ -1,0 +1,23 @@
+{
+  "name": "minimatch",
+  "version": "10.2.6",
+  "private": true,
+  "description": "Camada local de compatibilidade com a API CommonJS do minimatch 3, delegando a execução ao minimatch 10.2.6 seguro.",
+  "main": "./index.cjs",
+  "module": "./index.mjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.cjs",
+      "default": "./index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "minimatch-secure": "npm:minimatch@10.2.6"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "MIT"
+}

@@ -11,7 +11,7 @@ import { useDesktopExperience } from "@/components/providers/desktop-experience-
 import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
 import { useAuth } from "@/components/providers/auth-provider";
 import { FinanceDataProvider } from "@/components/providers/finance-data-provider";
-import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, SearchIcon, ShieldIcon, SunIcon } from "@/components/shared/icons";
+import { CheckIcon, MenuIcon, MoonIcon, PlusIcon, SearchIcon, ShieldIcon, SunIcon, WarningIcon } from "@/components/shared/icons";
 import { accessContent } from "@/content/acessos";
 import { dashboardContent, dashboardNavigation } from "@/content/dashboard";
 import { integrationContent } from "@/content/integracao";
@@ -20,6 +20,12 @@ import { initialFinancialPreferences } from "@/data/configuracoes";
 import { dashboardData } from "@/data/dashboard";
 import { createInitials, getStoredWorkspaceId, persistWorkspaceId } from "@/lib/access-control";
 import { isSafeModeEnabled, setSafeModeEnabled } from "@/lib/desktop/protection";
+import {
+  getContinuityPreferences,
+  getDatabaseAccessStatus,
+  runStartupContinuityCheck,
+} from "@/lib/desktop/continuity";
+import { ensureDeviceBackupKey } from "@/lib/desktop/stronghold";
 import {
   applyAppearance,
   getOppositeAppearance,
@@ -56,7 +62,10 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
   const [appearanceSaving, setAppearanceSaving] = useState(false);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
   const [safeMode, setSafeMode] = useState(false);
+  const [nativeReadOnly, setNativeReadOnly] = useState(false);
+  const [nativeReadOnlyReason, setNativeReadOnlyReason] = useState("");
   const redirectingToLoginRef = useRef(false);
+  const continuityStartedRef = useRef(false);
   const allNavigationItems = useMemo(() => dashboardNavigation.flatMap((group) => group.items), []);
 
 
@@ -68,6 +77,33 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
     window.addEventListener("finnacialux-safe-mode-change", handleSafeModeChange);
     return () => window.removeEventListener("finnacialux-safe-mode-change", handleSafeModeChange);
   }, []);
+
+
+  useEffect(() => {
+    if (!user || !selectedWorkspaceId || continuityStartedRef.current) return;
+    continuityStartedRef.current = true;
+
+    async function initializeContinuity() {
+      const preferences = await getContinuityPreferences();
+      if (!preferences.startupIntegrityCheck) {
+        const access = await getDatabaseAccessStatus();
+        setNativeReadOnly(access.readOnly);
+        setNativeReadOnlyReason(access.reason ?? "");
+        return;
+      }
+
+      const credential = await ensureDeviceBackupKey().catch(() => undefined);
+      const result = await runStartupContinuityCheck(credential);
+      setNativeReadOnly(result.readOnlyActivated);
+      setNativeReadOnlyReason(result.readOnlyActivated ? result.message : "");
+    }
+
+    void initializeContinuity().catch(async () => {
+      const access = await getDatabaseAccessStatus().catch(() => null);
+      setNativeReadOnly(Boolean(access?.readOnly));
+      setNativeReadOnlyReason(access?.reason ?? "");
+    });
+  }, [selectedWorkspaceId, user]);
 
   useEffect(() => {
     if (loading || user || redirectingToLoginRef.current) return;
@@ -175,7 +211,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
 
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? workspaces[0];
   const isReadOnly = selectedWorkspace.role === "viewer";
-  const effectiveReadOnly = isReadOnly || safeMode;
+  const effectiveReadOnly = isReadOnly || safeMode || nativeReadOnly;
 
   function toggleAppearance() {
     if (appearanceSaving) return;
@@ -231,7 +267,7 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
           </div>
           <div className="top-actions">
             {effectiveReadOnly ? (
-              <span className="new-entry-button read-only-button">{safeMode ? "Modo seguro" : dashboardContent.topbar.readOnly}</span>
+              <span className="new-entry-button read-only-button">{nativeReadOnly ? "Proteção de dados" : safeMode ? "Modo seguro" : dashboardContent.topbar.readOnly}</span>
             ) : (
               <Link className="new-entry-button" href="/lancamentos#novo-lancamento"><PlusIcon />{dashboardContent.topbar.newEntry}</Link>
             )}
@@ -298,6 +334,13 @@ function DashboardShellFrame({ children }: { children: React.ReactNode }) {
           </nav>
         ) : null}
 
+        {nativeReadOnly ? (
+          <div className="desktop-safe-mode-banner native-read-only-banner" role="alert">
+            <WarningIcon />
+            <div><strong>Gravações financeiras bloqueadas pelo núcleo</strong><span>{nativeReadOnlyReason || "A verificação de integridade ativou o modo somente leitura."}</span></div>
+            <Link href="/configuracoes#continuidade">Abrir continuidade</Link>
+          </div>
+        ) : null}
         {safeMode ? (
           <div className="desktop-safe-mode-banner" role="status">
             <ShieldIcon />

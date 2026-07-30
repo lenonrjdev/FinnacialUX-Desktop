@@ -24,7 +24,9 @@ jobs:
         shell: powershell
         run: choco install strawberryperl nasm -y --no-progress
       - name: Instalar dependências JavaScript
-        run: npm install
+        run: npm ci
+      - name: Auditar dependências altas e críticas
+        run: npm audit --audit-level=high
       - name: Resolver versão da release
         shell: powershell
         run: |

@@ -3,6 +3,7 @@ mod encrypted_database;
 mod protection;
 mod security;
 mod portability;
+mod continuity;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -116,6 +117,7 @@ pub fn run() {
             encrypted_database::encrypted_database_status,
             encrypted_database::encrypted_database_close,
             encrypted_database::encrypted_database_rekey,
+            encrypted_database::database_access_status,
             protection::create_manual_backup,
             protection::run_automatic_backup,
             protection::create_pre_update_backup,
@@ -151,6 +153,15 @@ pub fn run() {
             portability::portability_record_operation,
             portability::portability_list_operations,
             portability::portability_undo_operation,
+            continuity::continuity_get_preferences,
+            continuity::continuity_save_preferences,
+            continuity::continuity_list_recovery_points,
+            continuity::continuity_create_recovery_point,
+            continuity::continuity_verify_recovery_point,
+            continuity::continuity_restore_recovery_point,
+            continuity::continuity_run_startup_check,
+            continuity::continuity_exit_read_only,
+            continuity::continuity_get_status,
         ])
         .setup(|app| {
             let local_data_dir = app

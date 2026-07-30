@@ -13,6 +13,7 @@ export const settingsContent = {
     security: "Segurança",
     activity: "Histórico",
     backups: "Backups",
+    continuity: "Continuidade",
     diagnostics: "Diagnóstico",
     desktop: "Desktop",
     accessibility: "Acessibilidade",

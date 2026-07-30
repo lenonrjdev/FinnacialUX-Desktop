@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 5;
+const CURRENT_SCHEMA_VERSION: i64 = 6;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -30,12 +30,14 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (3, "add_stronghold_argon2_pin_lock_and_encrypted_backups", include_str!("../migrations/0003_local_security.sql")),
     (4, "encrypt_database_with_sqlcipher_and_key_rotation", include_str!("../migrations/0004_database_encryption.sql")),
     (5, "add_import_export_and_portability_history", include_str!("../migrations/0005_data_portability.sql")),
+    (6, "add_integrity_recovery_and_continuity_controls", include_str!("../migrations/0006_data_continuity.sql")),
 ];
 
 #[derive(Default)]
 pub struct EncryptedDatabaseState {
     key: RwLock<Option<Zeroizing<Vec<u8>>>>,
     status: RwLock<Option<DatabaseEncryptionStatus>>,
+    access: RwLock<Option<DatabaseAccessStatus>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -52,6 +54,21 @@ pub struct DatabaseEncryptionStatus {
     pub last_key_rotation_at: Option<String>,
     pub migrated_from_plaintext: bool,
     pub migration_backup_path: Option<String>,
+}
+
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatabaseAccessStatus {
+    pub read_only: bool,
+    pub reason: Option<String>,
+    pub entered_at: Option<String>,
+}
+
+impl Default for DatabaseAccessStatus {
+    fn default() -> Self {
+        Self { read_only: false, reason: None, entered_at: None }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -83,6 +100,9 @@ impl EncryptedDatabaseState {
         if let Ok(mut status) = self.status.write() {
             *status = None;
         }
+        if let Ok(mut access) = self.access.write() {
+            *access = None;
+        }
     }
 
     fn set_status(&self, value: DatabaseEncryptionStatus) {
@@ -93,6 +113,28 @@ impl EncryptedDatabaseState {
 
     pub(crate) fn status(&self) -> Option<DatabaseEncryptionStatus> {
         self.status.read().ok().and_then(|value| value.clone())
+    }
+
+    pub(crate) fn key_for_recovery(&self) -> Result<Zeroizing<Vec<u8>>, String> {
+        self.key_copy()
+    }
+
+    pub(crate) fn set_read_only(&self, read_only: bool, reason: Option<String>) {
+        if let Ok(mut access) = self.access.write() {
+            *access = Some(DatabaseAccessStatus {
+                read_only,
+                reason: if read_only { reason } else { None },
+                entered_at: if read_only { Some(Utc::now().to_rfc3339()) } else { None },
+            });
+        }
+    }
+
+    pub(crate) fn access_status(&self) -> DatabaseAccessStatus {
+        self.access
+            .read()
+            .ok()
+            .and_then(|value| value.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -211,9 +253,26 @@ async fn verify_encrypted_database(path: &Path, key: &[u8]) -> Result<String, St
         .fetch_one(&mut connection)
         .await
         .map_err(|_| "O banco criptografado não passou na validação de leitura.".to_string())?;
+    let quick_check = sqlx::query_scalar::<_, String>("PRAGMA quick_check(1)")
+        .fetch_one(&mut connection)
+        .await
+        .map_err(|_| "O banco criptografado não concluiu a verificação rápida de integridade.".to_string())?;
+    if !quick_check.eq_ignore_ascii_case("ok") {
+        let _ = connection.close().await;
+        return Err(format!("O banco criptografado apresentou inconsistência: {quick_check}"));
+    }
     connection.close().await.map_err(to_error)?;
     Ok(version)
 }
+
+pub(crate) async fn verify_encrypted_snapshot(
+    path: &Path,
+    state: &EncryptedDatabaseState,
+) -> Result<(), String> {
+    let key = state.key_for_recovery()?;
+    verify_encrypted_database(path, &key).await.map(|_| ())
+}
+
 
 fn encrypt_legacy_backup(key: &[u8], plaintext: &[u8], destination: &Path) -> Result<(), String> {
     let cipher = Aes256Gcm::new_from_slice(key).map_err(to_error)?;
@@ -605,6 +664,78 @@ async fn persist_security_state(
     Ok(())
 }
 
+#[derive(Debug)]
+struct PreMigrationRecoveryPoint {
+    id: String,
+    file_name: String,
+    file_path: String,
+    schema_version: i64,
+    size_bytes: i64,
+    checksum_sha256: String,
+    created_at: String,
+}
+
+fn file_sha256(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(to_error)?;
+    Ok(hex::encode(Sha256::digest(bytes)))
+}
+
+async fn create_pre_migration_recovery_point(
+    app: &AppHandle,
+    connection: &mut SqliteConnection,
+    path: &Path,
+    schema_version: i64,
+    key: &[u8],
+) -> Result<Option<PreMigrationRecoveryPoint>, String> {
+    if schema_version < 1 || schema_version >= CURRENT_SCHEMA_VERSION || !path.exists() {
+        return Ok(None);
+    }
+    sqlx::raw_sql("PRAGMA wal_checkpoint(FULL);")
+        .execute(&mut *connection)
+        .await
+        .map_err(to_error)?;
+    let created_at = Utc::now().to_rfc3339();
+    let stamp = Utc::now().format("%Y%m%d-%H%M%S");
+    let file_name = format!("FinnacialUX-pre-migracao-schema-{schema_version}-{stamp}.sqlcipher");
+    let destination = backups_dir(app)?.join(&file_name);
+    fs::copy(path, &destination).map_err(to_error)?;
+    if let Err(error) = verify_encrypted_database(&destination, key).await {
+        let _ = fs::remove_file(&destination);
+        return Err(format!("O snapshot anterior à migration falhou na verificação: {error}"));
+    }
+    Ok(Some(PreMigrationRecoveryPoint {
+        id: Uuid::new_v4().to_string(),
+        file_name,
+        file_path: destination.to_string_lossy().to_string(),
+        schema_version,
+        size_bytes: fs::metadata(&destination).map_err(to_error)?.len() as i64,
+        checksum_sha256: file_sha256(&destination)?,
+        created_at,
+    }))
+}
+
+async fn register_pre_migration_recovery_point(
+    connection: &mut SqliteConnection,
+    app: &AppHandle,
+    point: &PreMigrationRecoveryPoint,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT OR REPLACE INTO continuity_recovery_points (id, file_name, file_path, reason, format, status, schema_version, size_bytes, checksum_sha256, created_at, verified_at, app_version, protected, error_message) VALUES ($1, $2, $3, 'pre_migration', 'sqlcipher', 'available', $4, $5, $6, $7, $7, $8, 1, NULL)",
+    )
+    .bind(&point.id)
+    .bind(&point.file_name)
+    .bind(&point.file_path)
+    .bind(point.schema_version)
+    .bind(point.size_bytes)
+    .bind(&point.checksum_sha256)
+    .bind(&point.created_at)
+    .bind(app.package_info().version.to_string())
+    .execute(&mut *connection)
+    .await
+    .map_err(to_error)?;
+    Ok(())
+}
+
 async fn encrypted_database_open_internal(
     app: &AppHandle,
     state: &EncryptedDatabaseState,
@@ -628,7 +759,22 @@ async fn encrypted_database_open_internal(
         .await
         .map_err(|_| "A chave do Stronghold não conseguiu abrir o banco. Restaure um backup portátil ou recupere o cofre deste dispositivo.".to_string())?;
     let cipher = cipher_version(&mut connection).await?;
+    let previous_schema = sqlx::query_scalar::<_, i64>("PRAGMA user_version")
+        .fetch_one(&mut connection)
+        .await
+        .unwrap_or(0);
+    let pre_migration = create_pre_migration_recovery_point(
+        app,
+        &mut connection,
+        &path,
+        previous_schema,
+        &key,
+    )
+    .await?;
     let schema_version = apply_migrations(&mut connection).await?;
+    if let Some(point) = &pre_migration {
+        register_pre_migration_recovery_point(&mut connection, app, point).await?;
+    }
     if schema_version != CURRENT_SCHEMA_VERSION {
         return Err(format!("O banco ficou na versão {schema_version}, mas o aplicativo exige a versão {CURRENT_SCHEMA_VERSION}."));
     }
@@ -654,6 +800,7 @@ async fn encrypted_database_open_internal(
     connection.close().await.map_err(to_error)?;
     state.set_key(key.to_vec())?;
     state.set_status(status.clone());
+    state.set_read_only(false, None);
     log::info!(
         "encrypted_database_opened schema={} migrated={} fingerprint={}",
         status.schema_version,
@@ -761,6 +908,10 @@ pub async fn encrypted_database_execute(
     values: Vec<Value>,
 ) -> Result<DatabaseExecuteResult, String> {
     validate_sql(&sql)?;
+    let access = state.access_status();
+    if access.read_only {
+        return Err(access.reason.unwrap_or_else(|| "O banco está em modo somente leitura e bloqueia gravações financeiras para proteger a integridade dos dados.".to_string()));
+    }
     let mut connection = connect_app_database(&app, &state).await?;
     let result = bind_json(sqlx::query(&sql), values)
         .execute(&mut connection)
@@ -788,6 +939,13 @@ pub async fn encrypted_database_select(
         .map_err(to_error)?;
     connection.close().await.map_err(to_error)?;
     rows.iter().map(row_to_json).collect()
+}
+
+#[tauri::command]
+pub fn database_access_status(
+    state: State<'_, EncryptedDatabaseState>,
+) -> DatabaseAccessStatus {
+    state.access_status()
 }
 
 #[tauri::command]
@@ -1039,13 +1197,70 @@ pub async fn replace_from_plaintext_snapshot(
     Ok(())
 }
 
+pub async fn replace_from_encrypted_snapshot(
+    app: &AppHandle,
+    state: &EncryptedDatabaseState,
+    source: &Path,
+) -> Result<(), String> {
+    if !source.exists() {
+        return Err("O ponto de recuperação não foi encontrado.".to_string());
+    }
+    let key = state.key_for_recovery()?;
+    verify_encrypted_database(source, &key).await?;
+    let database = database_path(app)?;
+    let timestamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
+    let staged = database.with_extension(format!("db.recovery-{timestamp}.tmp"));
+    let previous = database.with_extension(format!("db.before-recovery-{timestamp}.tmp"));
+    remove_sqlite_file_set(&staged)?;
+    fs::copy(source, &staged).map_err(to_error)?;
+
+    let mut staged_connection = encrypted_options(&staged, &key, false)
+        .connect()
+        .await
+        .map_err(to_error)?;
+    let staged_schema = apply_migrations(&mut staged_connection).await?;
+    if staged_schema != CURRENT_SCHEMA_VERSION {
+        let _ = staged_connection.close().await;
+        let _ = fs::remove_file(&staged);
+        return Err(format!("O ponto de recuperação não pôde ser atualizado para o schema {CURRENT_SCHEMA_VERSION}."));
+    }
+    persist_security_state(&mut staged_connection, &key, false, None).await?;
+    staged_connection.close().await.map_err(to_error)?;
+    verify_encrypted_database(&staged, &key).await?;
+
+    if database.exists() {
+        fs::rename(&database, &previous).map_err(to_error)?;
+    }
+    for suffix in ["-wal", "-shm"] {
+        let sidecar = PathBuf::from(format!("{}{}", database.to_string_lossy(), suffix));
+        if sidecar.exists() { let _ = fs::remove_file(sidecar); }
+    }
+    if let Err(error) = fs::rename(&staged, &database) {
+        if previous.exists() { let _ = fs::rename(&previous, &database); }
+        return Err(format!("A troca pelo ponto de recuperação falhou e foi revertida: {error}"));
+    }
+    if let Err(error) = verify_encrypted_database(&database, &key).await {
+        let _ = fs::remove_file(&database);
+        if previous.exists() { let _ = fs::rename(&previous, &database); }
+        return Err(format!("O ponto restaurado falhou na validação final: {error}"));
+    }
+    if previous.exists() { let _ = fs::remove_file(previous); }
+    let mut restored = encrypted_options(&database, &key, false).connect().await.map_err(to_error)?;
+    let cipher = cipher_version(&mut restored).await?;
+    let status = read_status(app, &mut restored, &key, cipher).await?;
+    restored.close().await.map_err(to_error)?;
+    state.set_status(status);
+    state.set_read_only(false, None);
+    Ok(())
+}
+
 #[cfg(test)]
 mod regression_tests {
     use super::*;
     use sqlx::Connection;
 
     #[tokio::test]
-    async fn migrations_reach_schema_five_and_are_idempotent() {
+    async fn migrations_reach_schema_six_and_are_idempotent() {
         let mut connection = SqliteConnectOptions::new()
             .filename(":memory:")
             .create_if_missing(true)
@@ -1070,6 +1285,25 @@ mod regression_tests {
         assert_eq!(history, CURRENT_SCHEMA_VERSION);
         assert_eq!(pragma, CURRENT_SCHEMA_VERSION);
         assert!(table_exists(&mut connection, "portability_operations").await.unwrap());
+        assert!(table_exists(&mut connection, "continuity_recovery_points").await.unwrap());
+    }
+
+    #[test]
+    fn read_only_state_requires_an_internal_integrity_decision() {
+        let state = EncryptedDatabaseState::default();
+        assert!(!state.access_status().read_only);
+
+        state.set_read_only(true, Some("integridade comprometida".to_string()));
+        let protected = state.access_status();
+        assert!(protected.read_only);
+        assert_eq!(protected.reason.as_deref(), Some("integridade comprometida"));
+        assert!(protected.entered_at.is_some());
+
+        state.set_read_only(false, None);
+        let released = state.access_status();
+        assert!(!released.read_only);
+        assert!(released.reason.is_none());
+        assert!(released.entered_at.is_none());
     }
 
     #[tokio::test]

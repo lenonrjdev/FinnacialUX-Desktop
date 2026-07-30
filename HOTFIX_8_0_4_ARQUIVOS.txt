@@ -1,0 +1,9 @@
+09_CORRIGIR_VULNERABILIDADES.cmd
+scripts/09_CORRIGIR_VULNERABILIDADES.ps1
+scripts/08_VALIDAR_QUALIDADE.ps1
+scripts/patch-secure-dependencies.mjs
+scripts/validate-installed-dependencies.mjs
+scripts/finalize-hotfix-version.mjs
+release/RELEASE_NOTES_0_8_4.md
+HOTFIX_8_0_4_STAGING_NPM_ISOLADO.md
+HOTFIX_8_0_4_ARQUIVOS.txt

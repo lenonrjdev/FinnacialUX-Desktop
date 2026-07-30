@@ -6,6 +6,16 @@ use sqlx::{Connection, Row};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
+fn ensure_database_writable(state: &EncryptedDatabaseState) -> Result<(), String> {
+    let access = state.access_status();
+    if access.read_only {
+        return Err(access.reason.unwrap_or_else(|| {
+            "O banco está em modo somente leitura e bloqueia gravações financeiras para proteger a integridade dos dados.".to_string()
+        }));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PortabilityOperationInput {
@@ -175,6 +185,7 @@ async fn apply_documents_internal(
     request: ApplyPortabilityRequest,
 ) -> Result<PortabilityOperation, String> {
     let state = app.state::<EncryptedDatabaseState>();
+    ensure_database_writable(&state)?;
     let mut connection = connect_app_database(app, &state).await?;
     let snapshot = read_documents(&mut connection, &request.workspace_id).await?;
     let modules = request.documents.keys().cloned().collect::<Vec<_>>();
@@ -237,6 +248,9 @@ async fn record_operation_internal(
     input: PortabilityOperationInput,
 ) -> Result<PortabilityOperation, String> {
     let state = app.state::<EncryptedDatabaseState>();
+    if input.direction != "export" {
+        ensure_database_writable(&state)?;
+    }
     let mut connection = connect_app_database(app, &state).await?;
     let modules = input.affected_modules.clone().unwrap_or_default();
     let operation = normalize_operation(&workspace_id, input, modules, 0, Some(false));
@@ -317,6 +331,7 @@ async fn undo_operation_internal(
     operation_id: String,
 ) -> Result<(), String> {
     let state = app.state::<EncryptedDatabaseState>();
+    ensure_database_writable(&state)?;
     let mut connection = connect_app_database(app, &state).await?;
     let row = sqlx::query(
         r#"SELECT undo_snapshot_json, reversible, status

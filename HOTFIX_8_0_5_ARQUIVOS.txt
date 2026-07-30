@@ -1,0 +1,13 @@
+09_CORRIGIR_VULNERABILIDADES.cmd
+scripts/09_CORRIGIR_VULNERABILIDADES.ps1
+scripts/patch-secure-dependencies.mjs
+scripts/validate-installed-dependencies.mjs
+scripts/check-minimatch-compat.mjs
+scripts/finalize-hotfix-version.mjs
+vendor/minimatch-v3-secure-compat/package.json
+vendor/minimatch-v3-secure-compat/index.cjs
+vendor/minimatch-v3-secure-compat/index.mjs
+vendor/minimatch-v3-secure-compat/README.md
+release/RELEASE_NOTES_0_8_5.md
+HOTFIX_8_0_5_MINIMATCH_SEGURO.md
+HOTFIX_8_0_5_ARQUIVOS.txt

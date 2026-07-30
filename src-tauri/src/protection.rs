@@ -28,7 +28,7 @@ const BACKUP_EXTENSION: &str = "fuxbackup";
 const DIAGNOSTIC_EXTENSION: &str = "fuxdiag";
 const BACKUP_MAGIC_V2: &[u8] = b"FUXBACKUP2\n";
 const BACKUP_MAGIC_V3: &[u8] = b"FUXBACKUP3\n";
-const CURRENT_SCHEMA_VERSION: i64 = 4;
+const CURRENT_SCHEMA_VERSION: i64 = 6;
 const SESSION_MARKER_FILE: &str = "session-active.marker";
 
 #[derive(Default)]
@@ -80,20 +80,20 @@ pub struct BackupManifest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BackupRecord {
-    id: String,
-    file_name: String,
-    file_path: String,
-    created_at: String,
-    size_bytes: i64,
-    modules_count: i64,
-    kind: String,
-    status: String,
-    integrity_status: String,
-    checksum_sha256: Option<String>,
-    app_version: String,
-    schema_version: i64,
-    encryption_mode: String,
-    error_message: Option<String>,
+    pub(crate) id: String,
+    pub(crate) file_name: String,
+    pub(crate) file_path: String,
+    pub(crate) created_at: String,
+    pub(crate) size_bytes: i64,
+    pub(crate) modules_count: i64,
+    pub(crate) kind: String,
+    pub(crate) status: String,
+    pub(crate) integrity_status: String,
+    pub(crate) checksum_sha256: Option<String>,
+    pub(crate) app_version: String,
+    pub(crate) schema_version: i64,
+    pub(crate) encryption_mode: String,
+    pub(crate) error_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -113,9 +113,9 @@ pub struct BackupPreview {
     file_name: String,
     package_size_bytes: u64,
     manifest: BackupManifest,
-    integrity: IntegrityReport,
-    compatible: bool,
-    compatibility_message: String,
+    pub(crate) integrity: IntegrityReport,
+    pub(crate) compatible: bool,
+    pub(crate) compatibility_message: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -128,21 +128,21 @@ pub struct BackupOperationResult {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RestoreOperationResult {
-    restored: bool,
-    safety_backup_path: String,
-    restored_from: String,
-    message: String,
+    pub(crate) restored: bool,
+    pub(crate) safety_backup_path: String,
+    pub(crate) restored_from: String,
+    pub(crate) message: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegrityReport {
-    ok: bool,
-    integrity_messages: Vec<String>,
-    foreign_key_violations: usize,
-    required_tables_present: bool,
-    schema_version: i64,
-    checked_at: String,
+    pub(crate) ok: bool,
+    pub(crate) integrity_messages: Vec<String>,
+    pub(crate) foreign_key_violations: usize,
+    pub(crate) required_tables_present: bool,
+    pub(crate) schema_version: i64,
+    pub(crate) checked_at: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -178,7 +178,7 @@ pub struct DiagnosticReport {
     last_backup_at: Option<String>,
     previous_unclean_shutdown: bool,
     safe_mode: bool,
-    integrity: IntegrityReport,
+    pub(crate) integrity: IntegrityReport,
     migrations: Vec<MigrationEntry>,
     generated_at: String,
 }
@@ -227,7 +227,7 @@ fn database_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_config_dir(app)?.join(DATABASE_FILE_NAME))
 }
 
-fn backups_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn backups_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let directory = app_config_dir(app)?.join("backups");
     fs::create_dir_all(&directory).map_err(to_error)?;
     Ok(directory)
@@ -423,6 +423,16 @@ async fn validate_connection(connection: &mut SqliteConnection) -> Result<Integr
     if version >= 4 {
         required_tables.push("database_security_state");
     }
+    if version >= 5 {
+        required_tables.push("portability_operations");
+    }
+    if version >= 6 {
+        required_tables.extend([
+            "continuity_preferences",
+            "continuity_recovery_points",
+            "continuity_events",
+        ]);
+    }
 
     let mut required_tables_present = true;
     for table in required_tables {
@@ -460,7 +470,7 @@ async fn validate_database(path: &Path) -> Result<IntegrityReport, String> {
     Ok(report)
 }
 
-async fn validate_current_database(
+pub(crate) async fn validate_current_database(
     app: &AppHandle,
     database: &EncryptedDatabaseState,
 ) -> Result<IntegrityReport, String> {
@@ -595,7 +605,7 @@ async fn insert_backup_history(app: &AppHandle, database: &EncryptedDatabaseStat
     Ok(())
 }
 
-async fn create_backup_internal(
+pub(crate) async fn create_backup_internal(
     app: &AppHandle,
     database: &EncryptedDatabaseState,
     destination: PathBuf,
@@ -908,6 +918,7 @@ async fn list_backups_internal(
         r#"SELECT id, file_name, file_path, created_at, size_bytes, modules_count, kind,
                   status, integrity_status, checksum_sha256, app_version, schema_version, encryption_mode, error_message
              FROM backup_history
+            WHERE kind != 'recovery_point'
          ORDER BY created_at DESC"#,
     )
     .fetch_all(&mut connection)
@@ -984,7 +995,7 @@ pub async fn remove_backup_record(
     Ok(())
 }
 
-async fn extract_and_validate_backup(
+pub(crate) async fn extract_and_validate_backup(
     path: &Path,
     credential: Option<&str>,
 ) -> Result<(BackupManifest, Vec<u8>, IntegrityReport), String> {
@@ -1060,7 +1071,7 @@ pub async fn preview_backup(
     })
 }
 
-async fn restore_backup_internal(
+pub(crate) async fn restore_backup_internal(
     app: &AppHandle,
     database_state: &EncryptedDatabaseState,
     source: String,

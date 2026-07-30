@@ -1,0 +1,16 @@
+HOTFIX 8.0.3 — ARQUIVOS NOVOS OU ALTERADOS
+
+09_CORRIGIR_VULNERABILIDADES.cmd
+HOTFIX_8_0_3_OVERRIDES_NPM.md
+HOTFIX_8_0_3_ARQUIVOS.txt
+scripts/patch-secure-dependencies.mjs
+scripts/09_CORRIGIR_VULNERABILIDADES.ps1
+scripts/08_VALIDAR_QUALIDADE.ps1
+src-tauri/Cargo.toml
+src-tauri/tauri.conf.json
+release/RELEASE_NOTES_0_8_3.md
+
+GERADOS/ALTERADOS DURANTE A EXECUCAO
+package.json
+package-lock.json
+node_modules/

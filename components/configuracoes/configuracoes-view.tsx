@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
+import { ContinuityPanel } from "@/components/configuracoes/continuity-panel";
 import { DesktopExperiencePanel } from "@/components/configuracoes/desktop-experience-panel";
 import { AccessibilityPanel } from "@/components/configuracoes/accessibility-panel";
 import { NotificationsPanel } from "@/components/configuracoes/notifications-panel";
@@ -168,6 +169,7 @@ export default function ConfiguracoesView() {
     const hashes: Partial<Record<SettingsView, string>> = {
       security: "seguranca",
       backups: "backups",
+      continuity: "continuidade",
       diagnostics: "diagnostico",
       desktop: "desktop",
       accessibility: "acessibilidade",
@@ -183,6 +185,7 @@ export default function ConfiguracoesView() {
       if (hash === "#atualizacoes") setView("updates");
       else if (hash === "#desktop") setView("desktop");
       else if (hash === "#acessibilidade") setView("accessibility");
+      else if (hash === "#continuidade") setView("continuity");
       else if (hash === "#diagnostico") setView("diagnostics");
       else if (hash === "#seguranca") setView("security");
       else if (hash === "#backups") setView("backups");
@@ -526,7 +529,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "continuity", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -581,6 +584,7 @@ export default function ConfiguracoesView() {
           onOpenFolder={() => openDesktopFolder("backups").then(() => undefined)}
         />
       ) : null}
+      {view === "continuity" ? <ContinuityPanel onFeedback={showFeedback} onConfirmRestore={() => desktopSecurity.confirmSensitiveAction("restore")} /> : null}
       {view === "diagnostics" ? <DiagnosticsPanel onFeedback={showFeedback} /> : null}
       {view === "desktop" ? <DesktopExperiencePanel /> : null}
       {view === "accessibility" ? <AccessibilityPanel /> : null}

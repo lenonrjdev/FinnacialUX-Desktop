@@ -22591,3 +22591,218 @@ html[data-theme="dark"] .portable-preview-card {
   border-color: #294634;
   background: #16251c;
 }
+
+/* =========================================================
+   FASE 9 — CONTINUIDADE, INTEGRIDADE E RECUPERAÇÃO
+   ========================================================= */
+.continuity-section {
+  display: grid;
+  gap: 18px;
+}
+
+.continuity-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.continuity-status-grid article {
+  display: flex;
+  gap: 12px;
+  min-height: 132px;
+  padding: 18px;
+  border: 1px solid var(--border-color, #e4e7ec);
+  background: var(--surface-color, #fff);
+}
+
+.continuity-status-grid article > span,
+.continuity-point-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 10px;
+  background: #f3f5f7;
+}
+
+.continuity-status-grid article.ok > span {
+  background: #eaf8ef;
+  color: #147a3d;
+}
+
+.continuity-status-grid article.critical > span {
+  background: #fff0ed;
+  color: #b42318;
+}
+
+.continuity-status-grid small,
+.continuity-status-grid p,
+.continuity-point-copy small,
+.continuity-latest-event small {
+  color: var(--muted-text, #667085);
+}
+
+.continuity-status-grid strong {
+  display: block;
+  margin: 4px 0 6px;
+  font-size: 1.04rem;
+}
+
+.continuity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.continuity-latest-event,
+.continuity-error {
+  display: grid;
+  gap: 3px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-left: 3px solid #98a2b3;
+  background: #f8fafc;
+}
+
+.continuity-latest-event.warning,
+.continuity-latest-event.critical,
+.continuity-error {
+  border-left-color: #d92d20;
+  background: #fff6f4;
+}
+
+.continuity-policy-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.continuity-policy-grid .settings-toggle-row {
+  min-height: 84px;
+}
+
+.continuity-save-button {
+  margin-top: 16px;
+}
+
+.continuity-points-list {
+  display: grid;
+  margin-top: 18px;
+}
+
+.continuity-points-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 0;
+  border-top: 1px solid var(--border-color, #e4e7ec);
+}
+
+.continuity-points-list article:first-child {
+  border-top: 0;
+}
+
+.continuity-points-list article.unavailable {
+  opacity: 0.62;
+}
+
+.continuity-point-copy > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.continuity-point-copy > div > span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  font-size: 0.75rem;
+}
+
+.continuity-point-copy > div > span.protected {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eef4ff;
+  color: #3448a4;
+}
+
+.continuity-point-copy > div > span.protected svg {
+  width: 12px;
+  height: 12px;
+}
+
+.continuity-point-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.continuity-point-status.available {
+  color: #147a3d;
+}
+
+.continuity-point-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.continuity-point-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #d0d5dd);
+  background: transparent;
+  font-weight: 700;
+}
+
+.native-read-only-banner a {
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  font-weight: 700;
+}
+
+html[data-theme="dark"] .continuity-status-grid article,
+html[data-theme="dark"] .continuity-point-copy > div > span,
+html[data-theme="dark"] .continuity-status-grid article > span,
+html[data-theme="dark"] .continuity-latest-event,
+html[data-theme="dark"] .continuity-error {
+  background: #17191d;
+}
+
+@media (max-width: 980px) {
+  .continuity-status-grid,
+  .continuity-policy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .continuity-points-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .continuity-point-status,
+  .continuity-point-actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .continuity-points-list article {
+    grid-template-columns: 1fr;
+  }
+
+  .continuity-point-icon,
+  .continuity-point-status,
+  .continuity-point-actions {
+    grid-column: 1;
+  }
+
+  .continuity-point-actions button {
+    flex: 1;
+  }
+}

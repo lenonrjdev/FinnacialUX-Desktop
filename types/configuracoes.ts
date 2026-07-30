@@ -5,6 +5,7 @@ export type SettingsView =
   | "security"
   | "activity"
   | "backups"
+  | "continuity"
   | "diagnostics"
   | "desktop"
   | "accessibility"
@@ -106,7 +107,7 @@ export type BackupSnapshot = {
   modulesCount: number;
   status: BackupStatus;
   automatic: boolean;
-  kind?: "manual" | "automatic" | "pre_restore" | "pre_update";
+  kind?: "manual" | "automatic" | "pre_restore" | "pre_update" | "recovery_point";
   filePath?: string;
   integrityStatus?: "ok" | "warning" | "failed";
   checksumSha256?: string | null;

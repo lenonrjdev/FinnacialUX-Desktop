@@ -1,0 +1,12 @@
+FINNACIALUX DESKTOP — HOTFIX 8.0.1
+Versão: 0.8.1
+Arquivos incrementais: 8
+
+eslint.config.mjs
+package.json
+scripts/08_VALIDAR_QUALIDADE.ps1
+src-tauri/Cargo.toml
+src-tauri/tauri.conf.json
+release/RELEASE_NOTES_0_8_1.md
+HOTFIX_8_0_1_QUALIDADE_ESLINT.md
+HOTFIX_8_0_1_ARQUIVOS.txt
