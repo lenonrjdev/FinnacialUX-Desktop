@@ -6,11 +6,7 @@ import { BudgetPerformance } from "@/components/relatorios/budget-performance";
 import { CashFlowReport } from "@/components/relatorios/cash-flow-report";
 import { CategoryReport } from "@/components/relatorios/category-report";
 import { FinancialHealthPanel } from "@/components/relatorios/financial-health-panel";
-import { ProjectionChart } from "@/components/relatorios/projection-chart";
-import { ProjectionCommitments } from "@/components/relatorios/projection-commitments";
-import { ProjectionRisks } from "@/components/relatorios/projection-risks";
-import { ProjectionSummary } from "@/components/relatorios/projection-summary";
-import { ProjectionTable } from "@/components/relatorios/projection-table";
+import { FinancialIntelligencePanel } from "@/components/relatorios/financial-intelligence-panel";
 import { ReportsHeading } from "@/components/relatorios/reports-heading";
 import { ReportsSummary } from "@/components/relatorios/reports-summary";
 import { ReportsToolbar } from "@/components/relatorios/reports-toolbar";
@@ -30,8 +26,9 @@ import {
   projectionScenarioSettings,
   reportsReferenceMonth,
 } from "@/data/relatorios";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
+import { formatPercentage } from "@/lib/formatters";
 import { addMonths, buildProjection, monthLabel, selectSnapshots } from "@/lib/reports";
+import type { FinancialIntelligenceProjection } from "@/types/financial-intelligence";
 import type {
   AccountReportRow,
   BudgetReportRow,
@@ -82,8 +79,9 @@ export default function RelatoriosView() {
   const { confirmSensitiveAction } = useDesktopSecurity();
   const [view, setView] = useState<ReportView>("reports");
   const [period, setPeriod] = useState<ReportPeriod>("last-6-months");
-  const [scenario, setScenario] = useState<ProjectionScenario>("realistic");
+  const [scenario, setScenario] = useState<ProjectionScenario>("expected");
   const [feedback, setFeedback] = useState("");
+  const [intelligenceProjection, setIntelligenceProjection] = useState<FinancialIntelligenceProjection | null>(null);
   const [transactions] = useFinanceDataState("transactions", transactionsData);
   const [accounts] = useFinanceDataState("accounts", initialAccounts);
   const [payables] = useFinanceDataState("payables", initialPayables);
@@ -260,14 +258,6 @@ export default function RelatoriosView() {
     scenario: projectionScenarioSettings[scenario],
   }), [averageProjectionIncome, debts, essentialExpenses, goalsContribution, installmentPlans, scenario, startingBalance, subscriptionExpenses, variableExpenseBaseline]);
 
-  const projectionSummary = useMemo(() => {
-    const totalIncome = projection.reduce((sum, row) => sum + row.income, 0);
-    const totalExpenses = projection.reduce((sum, row) => sum + row.totalExpenses, 0);
-    const endingBalance = projection.at(-1)?.projectedBalance ?? startingBalance;
-    const lowestBalance = Math.min(startingBalance, ...projection.map((row) => row.projectedBalance));
-    return { totalIncome, totalExpenses, endingBalance, lowestBalance };
-  }, [projection, startingBalance]);
-
   const commitments = useMemo<ProjectionCommitmentSummary>(() => {
     const first = projection[0];
     return {
@@ -332,21 +322,21 @@ export default function RelatoriosView() {
 
   async function exportReport() {
     if (!(await confirmSensitiveAction("export"))) return;
-    if (view === "projection") {
-      downloadCsv("projecao-financeira-12-meses.csv", [
-        ["Mês", "Entradas", "Contas essenciais", "Assinaturas", "Dívidas", "Parcelamentos", "Metas", "Gastos variáveis", "Saídas totais", "Resultado", "Saldo projetado"],
-        ...projection.map((row) => [
+    if (view === "projection" && intelligenceProjection) {
+      downloadCsv(`inteligencia-financeira-${intelligenceProjection.horizonDays}-dias.csv`, [
+        ["Cenário", intelligenceProjection.scenario],
+        ["Horizonte", `${intelligenceProjection.horizonDays} dias`],
+        ["Checksum", intelligenceProjection.sourceChecksum],
+        [],
+        ["Mês", "Entradas projetadas", "Saídas projetadas", "Resultado", "Saldo final", "Menor saldo", "Confiança"],
+        ...intelligenceProjection.monthly.map((row) => [
           row.label,
-          csvMoney(row.income),
-          csvMoney(row.essentialExpenses),
-          csvMoney(row.subscriptions),
-          csvMoney(row.debts),
-          csvMoney(row.installments),
-          csvMoney(row.goals),
-          csvMoney(row.variableExpenses),
-          csvMoney(row.totalExpenses),
-          csvMoney(row.monthlyResult),
-          csvMoney(row.projectedBalance),
+          csvMoney(row.expectedIncome),
+          csvMoney(row.expectedExpenses),
+          csvMoney(row.netChange),
+          csvMoney(row.endingBalance),
+          csvMoney(row.lowestBalance),
+          formatPercentage(row.confidence * 100),
         ]),
       ]);
     } else {
@@ -399,23 +389,11 @@ export default function RelatoriosView() {
           </div>
         </>
       ) : (
-        <>
-          <ProjectionSummary
-            startingBalance={startingBalance}
-            endingBalance={projectionSummary.endingBalance}
-            totalIncome={projectionSummary.totalIncome}
-            totalExpenses={projectionSummary.totalExpenses}
-            lowestBalance={projectionSummary.lowestBalance}
-          />
-          <div className="projection-primary-grid">
-            <ProjectionChart rows={projection} startingBalance={startingBalance} />
-            <ProjectionRisks rows={projection} />
-          </div>
-          <div className="projection-secondary-grid">
-            <ProjectionCommitments commitments={commitments} />
-            <ProjectionTable rows={projection} />
-          </div>
-        </>
+        <FinancialIntelligencePanel
+          scenario={scenario}
+          onScenarioChange={setScenario}
+          onProjectionChange={setIntelligenceProjection}
+        />
       )}
 
       {feedback ? (

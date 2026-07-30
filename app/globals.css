@@ -23360,3 +23360,689 @@ html[data-theme="dark"] .automation-run-status {
   background: #30333a;
   color: #c7cad0;
 }
+
+/* =========================================================
+   FASE 11 — INTELIGÊNCIA FINANCEIRA LOCAL
+   ========================================================= */
+
+.financial-intelligence-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.intelligence-local-banner {
+  min-height: 72px;
+  padding: 15px 18px;
+  border: 1px solid #dce5dc;
+  border-radius: 7px;
+  background: #f7fbf7;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.intelligence-local-banner > span {
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  background: #e5f1e5;
+  color: #3b6844;
+  display: grid;
+  place-items: center;
+}
+
+.intelligence-local-banner > span svg {
+  width: 17px;
+  height: 17px;
+}
+
+.intelligence-local-banner strong {
+  color: #294c31;
+  font-size: 12px;
+}
+
+.intelligence-local-banner p {
+  margin: 4px 0 0;
+  color: #718176;
+  font-size: 10.4px;
+  line-height: 1.45;
+}
+
+.intelligence-local-banner code {
+  max-width: 210px;
+  overflow: hidden;
+  color: #718176;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intelligence-panel-header-with-action {
+  align-items: flex-start;
+}
+
+.intelligence-control-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intelligence-control-actions button,
+.intelligence-panel-header-with-action button,
+.intelligence-save-scenario-row button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 10.4px;
+  font-weight: 700;
+}
+
+.intelligence-control-actions button svg,
+.intelligence-panel-header-with-action button svg,
+.intelligence-save-scenario-row button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.intelligence-controls-grid {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(320px, 1.45fr) repeat(2, minmax(180px, .7fr)) minmax(240px, .8fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.intelligence-controls-grid fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.intelligence-controls-grid legend,
+.intelligence-controls-grid label > span,
+.intelligence-simulator-grid label > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #8f8d96;
+  font-size: 9.6px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.intelligence-controls-grid select,
+.intelligence-controls-grid input[type="number"],
+.intelligence-save-scenario-row input,
+.intelligence-simulator-grid input {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #e5e3e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #46444d;
+  font-size: 11px;
+  outline: none;
+}
+
+.intelligence-controls-grid select:focus,
+.intelligence-controls-grid input:focus,
+.intelligence-save-scenario-row input:focus,
+.intelligence-simulator-grid input:focus {
+  border-color: #6f6c77;
+  box-shadow: 0 0 0 3px rgba(45, 43, 52, .08);
+}
+
+.intelligence-horizon-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.intelligence-horizon-options button {
+  min-height: 38px;
+  border: 1px solid #e5e3e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #77747e;
+  font-size: 10.4px;
+  font-weight: 700;
+}
+
+.intelligence-horizon-options button.active {
+  border-color: #181720;
+  background: #181720;
+  color: #fff;
+}
+
+.intelligence-checkbox-field {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #e5e3e8;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.intelligence-checkbox-field input {
+  width: 15px;
+  height: 15px;
+  accent-color: #181720;
+}
+
+.intelligence-checkbox-field > span {
+  margin: 0 !important;
+  color: #5f5c66 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+.intelligence-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) repeat(5, minmax(135px, .72fr));
+  gap: 12px;
+}
+
+.intelligence-summary-card {
+  min-height: 138px;
+}
+
+.intelligence-primary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(330px, .8fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.intelligence-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.intelligence-storage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  gap: 14px;
+}
+
+.intelligence-trajectory-chart {
+  min-height: 300px;
+  padding: 24px 18px 18px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.intelligence-trajectory-column {
+  min-width: 58px;
+  flex: 1 0 58px;
+  display: grid;
+  grid-template-rows: minmax(190px, 1fr) auto auto auto;
+  justify-items: center;
+  gap: 5px;
+}
+
+.intelligence-trajectory-axis {
+  width: 100%;
+  min-height: 190px;
+  padding: 0 8px;
+  border-bottom: 1px solid #e7e5e9;
+  background: linear-gradient(to top, transparent 49.5%, #f2f0f3 50%, transparent 50.5%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.intelligence-trajectory-axis > span {
+  width: min(28px, 75%);
+  min-height: 5px;
+  border-radius: 4px 4px 1px 1px;
+  background: #8da49a;
+}
+
+.intelligence-trajectory-axis > span.negative {
+  background: #c48686;
+}
+
+.intelligence-trajectory-column strong {
+  color: #4c4a53;
+  font-size: 10px;
+}
+
+.intelligence-trajectory-column small,
+.intelligence-trajectory-column em {
+  color: #9b98a1;
+  font-size: 8.7px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.intelligence-risk-list,
+.intelligence-anomaly-list,
+.intelligence-goal-list,
+.intelligence-saved-list,
+.intelligence-snapshot-list {
+  display: grid;
+}
+
+.intelligence-risk-list > article,
+.intelligence-anomaly-list > div,
+.intelligence-goal-list > div {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.intelligence-risk-list > article:last-child,
+.intelligence-anomaly-list > div:last-child,
+.intelligence-goal-list > div:last-child {
+  border-bottom: 0;
+}
+
+.intelligence-risk-icon,
+.intelligence-anomaly-list > div > span,
+.intelligence-goal-list > div > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #f5f4f6;
+  color: #696670;
+  display: grid;
+  place-items: center;
+}
+
+.intelligence-risk-list article.attention .intelligence-risk-icon,
+.intelligence-anomaly-list > div.attention > span,
+.intelligence-goal-list > div.attention > span {
+  background: #fff7e9;
+  color: #9a6d24;
+}
+
+.intelligence-risk-list article.critical .intelligence-risk-icon,
+.intelligence-anomaly-list > div.critical > span,
+.intelligence-goal-list > div.unreachable > span {
+  background: #fff0f0;
+  color: #a64d4d;
+}
+
+.intelligence-risk-icon svg,
+.intelligence-anomaly-list svg,
+.intelligence-goal-list svg {
+  width: 14px;
+  height: 14px;
+}
+
+.intelligence-risk-list header,
+.intelligence-anomaly-list header,
+.intelligence-goal-list header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.intelligence-risk-list strong,
+.intelligence-anomaly-list strong,
+.intelligence-goal-list strong {
+  color: #3e3b45;
+  font-size: 11px;
+}
+
+.intelligence-risk-list header span,
+.intelligence-anomaly-list header b,
+.intelligence-goal-list header b {
+  color: #65626c;
+  font-size: 9.8px;
+}
+
+.intelligence-risk-list p,
+.intelligence-anomaly-list p,
+.intelligence-goal-list p {
+  margin: 5px 0 0;
+  color: #7f7c85;
+  font-size: 10.2px;
+  line-height: 1.48;
+}
+
+.intelligence-risk-list small,
+.intelligence-anomaly-list small,
+.intelligence-goal-list small {
+  display: block;
+  margin-top: 7px;
+  color: #aaa7af;
+  font-size: 9.3px;
+  line-height: 1.45;
+}
+
+.intelligence-risk-list details {
+  margin-top: 8px;
+  color: #77747e;
+  font-size: 9.2px;
+}
+
+.intelligence-risk-list details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.intelligence-risk-list details p {
+  margin-top: 5px;
+  font-size: 9.2px;
+}
+
+.intelligence-empty-state {
+  min-height: 92px;
+  padding: 18px;
+  color: #929099;
+  font-size: 10.4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.intelligence-empty-state svg {
+  width: 15px;
+  height: 15px;
+}
+
+.intelligence-simulator-grid {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 13px;
+}
+
+.intelligence-actual-grid {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.intelligence-actual-grid > div {
+  padding: 13px;
+  border: 1px solid #eceaed;
+  border-radius: 6px;
+  background: #fbfafc;
+}
+
+.intelligence-actual-grid > div > span {
+  color: #67646d;
+  font-size: 10.4px;
+  font-weight: 700;
+}
+
+.intelligence-actual-grid dl {
+  margin: 10px 0 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.intelligence-actual-grid dl > div {
+  display: grid;
+  gap: 3px;
+}
+
+.intelligence-actual-grid dt {
+  color: #aaa7af;
+  font-size: 8.7px;
+}
+
+.intelligence-actual-grid dd {
+  margin: 0;
+  color: #504d57;
+  font-size: 10.2px;
+  font-weight: 700;
+}
+
+.intelligence-actual-grid > div > strong {
+  font-size: 11px;
+}
+
+.intelligence-save-scenario-row {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.intelligence-saved-list > div {
+  min-height: 58px;
+  padding: 8px 12px 8px 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.intelligence-saved-list > div:last-child {
+  border-bottom: 0;
+}
+
+.intelligence-saved-list > div > button:first-child {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  text-align: left;
+}
+
+.intelligence-saved-list strong {
+  color: #46434d;
+  font-size: 10.8px;
+}
+
+.intelligence-saved-list span {
+  color: #9e9ba4;
+  font-size: 9.2px;
+}
+
+.intelligence-saved-list .icon-action-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #eceaed;
+  border-radius: 6px;
+  background: #fff;
+  color: #8d8992;
+  display: grid;
+  place-items: center;
+}
+
+.intelligence-saved-list .icon-action-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.intelligence-snapshot-list > div {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.intelligence-snapshot-list > div:last-child {
+  border-bottom: 0;
+}
+
+.intelligence-snapshot-list span,
+.intelligence-snapshot-list small {
+  color: #9c99a2;
+  font-size: 9px;
+}
+
+.intelligence-snapshot-list strong {
+  color: #4a4751;
+  font-size: 10.4px;
+}
+
+.intelligence-events-table td:nth-child(2) {
+  min-width: 260px;
+}
+
+.intelligence-events-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #aaa7af;
+  font-size: 8.8px;
+  line-height: 1.4;
+}
+
+.intelligence-events-table td:nth-child(3) {
+  text-transform: capitalize;
+}
+
+.intelligence-methodology-note {
+  padding: 14px 17px;
+  border: 1px solid #e5e3e8;
+  border-radius: 7px;
+  background: #faf9fb;
+  color: #85828b;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.intelligence-methodology-note svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.intelligence-methodology-note p {
+  margin: 0 0 3px;
+  font-size: 9.6px;
+  line-height: 1.45;
+}
+
+.intelligence-methodology-note p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1380px) {
+  .intelligence-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .intelligence-controls-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .intelligence-simulator-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1050px) {
+  .intelligence-primary-grid,
+  .intelligence-secondary-grid,
+  .intelligence-storage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .intelligence-simulator-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .intelligence-local-banner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .intelligence-local-banner code {
+    display: none;
+  }
+
+  .intelligence-panel-header-with-action,
+  .intelligence-control-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .intelligence-controls-grid,
+  .intelligence-summary-grid,
+  .intelligence-simulator-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .intelligence-horizon-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .intelligence-save-scenario-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+html[data-theme="dark"] .intelligence-local-banner {
+  border-color: #294534;
+  background: #17251b;
+}
+
+html[data-theme="dark"] .intelligence-local-banner > span {
+  background: #243b2a;
+  color: #a3c7aa;
+}
+
+html[data-theme="dark"] .intelligence-local-banner strong {
+  color: #d2e8d5;
+}
+
+html[data-theme="dark"] .intelligence-local-banner p,
+html[data-theme="dark"] .intelligence-local-banner code,
+html[data-theme="dark"] .intelligence-methodology-note,
+html[data-theme="dark"] .intelligence-risk-list p,
+html[data-theme="dark"] .intelligence-risk-list small,
+html[data-theme="dark"] .intelligence-anomaly-list p,
+html[data-theme="dark"] .intelligence-anomaly-list small,
+html[data-theme="dark"] .intelligence-goal-list p,
+html[data-theme="dark"] .intelligence-goal-list small {
+  color: #9895a0;
+}
+
+html[data-theme="dark"] .intelligence-controls-grid select,
+html[data-theme="dark"] .intelligence-controls-grid input,
+html[data-theme="dark"] .intelligence-horizon-options button,
+html[data-theme="dark"] .intelligence-checkbox-field,
+html[data-theme="dark"] .intelligence-simulator-grid input,
+html[data-theme="dark"] .intelligence-save-scenario-row input,
+html[data-theme="dark"] .intelligence-saved-list .icon-action-button,
+html[data-theme="dark"] .intelligence-actual-grid > div {
+  border-color: #3a3741;
+  background: #222029;
+  color: #ddd9e3;
+}
+
+html[data-theme="dark"] .intelligence-horizon-options button.active {
+  border-color: #f2eef5;
+  background: #f2eef5;
+  color: #17151d;
+}
+
+html[data-theme="dark"] .intelligence-trajectory-axis {
+  border-color: #3a3741;
+  background: linear-gradient(to top, transparent 49.5%, #34313b 50%, transparent 50.5%);
+}
+
+html[data-theme="dark"] .intelligence-methodology-note {
+  border-color: #37343d;
+  background: #201e26;
+}

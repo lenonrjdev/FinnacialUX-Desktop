@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "0.11.0",
+  "version": "0.10.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestao financeira offline com SQLCipher, automacoes reversiveis e inteligencia financeira local explicavel.",
+  "description": "FinnacialUX Desktop — gestao financeira offline com SQLCipher, continuidade e automacoes locais reversiveis.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

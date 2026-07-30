@@ -6,7 +6,7 @@ export type ReportPeriod =
   | "last-6-months"
   | "year";
 
-export type ProjectionScenario = "conservative" | "realistic" | "optimistic";
+export type ProjectionScenario = "conservative" | "expected" | "optimistic";
 
 export type FinancialTrend = "up" | "down" | "stable";
 

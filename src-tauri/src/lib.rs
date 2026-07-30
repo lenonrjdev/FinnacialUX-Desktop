@@ -5,6 +5,7 @@ mod security;
 mod portability;
 mod continuity;
 mod automations;
+mod intelligence;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -170,6 +171,13 @@ pub fn run() {
             automations::automation_list_runs,
             automations::automation_undo_run,
             automations::automation_mark_alert,
+            intelligence::intelligence_get_preferences,
+            intelligence::intelligence_save_preferences,
+            intelligence::intelligence_list_scenarios,
+            intelligence::intelligence_save_scenario,
+            intelligence::intelligence_delete_scenario,
+            intelligence::intelligence_record_snapshot,
+            intelligence::intelligence_list_snapshots,
         ])
         .setup(|app| {
             let local_data_dir = app

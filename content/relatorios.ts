@@ -11,11 +11,11 @@ export const reportsContent = {
   },
   views: {
     reports: "Relatórios",
-    projection: "Projeção financeira",
+    projection: "Inteligência local",
   },
   toolbar: {
     period: "Período analisado",
-    scenario: "Cenário da projeção",
+    scenario: "Cenário financeiro",
     currentMonth: "Mês atual",
     lastThreeMonths: "Últimos 3 meses",
     lastSixMonths: "Últimos 6 meses",
@@ -119,8 +119,8 @@ export const reportsContent = {
       label: "Conservador",
       helper: "Receitas 10% menores e despesas 5% maiores",
     },
-    realistic: {
-      label: "Realista",
+    expected: {
+      label: "Esperado",
       helper: "Mantém a renda média e os compromissos atuais",
     },
     optimistic: {

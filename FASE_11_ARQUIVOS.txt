@@ -1,0 +1,38 @@
+FINNACIALUX DESKTOP - FASE 11 - ARQUIVOS INCREMENTAIS
+Versao de destino: 0.11.0
+Schema de destino: 8
+Total: 31 arquivos novos ou alterados
+
+12_APLICAR_FASE_11.cmd
+12_VALIDAR_FASE_11.cmd
+FASE_11_DESKTOP_INTELIGENCIA_FINANCEIRA.md
+README.md
+app/globals.css
+components/relatorios/financial-intelligence-panel.tsx
+components/relatorios/intelligence-projection-panel.tsx
+components/relatorios/intelligence-risk-panel.tsx
+components/relatorios/intelligence-simulator.tsx
+components/relatorios/intelligence-summary.tsx
+components/relatorios/relatorios-view.tsx
+components/relatorios/reports-toolbar.tsx
+content/intelligence.ts
+content/relatorios.ts
+data/relatorios.ts
+docs/INTELIGENCIA_FINANCEIRA_LOCAL.md
+lib/desktop/intelligence.ts
+lib/intelligence-engine.ts
+release/RELEASE_NOTES_0_11_0.md
+scripts/12_APLICAR_FASE_11.ps1
+scripts/12_FINALIZAR_FASE_11.mjs
+scripts/12_VALIDAR_FASE_11.ps1
+src-tauri/migrations/0008_local_financial_intelligence.sql
+src-tauri/src/encrypted_database.rs
+src-tauri/src/intelligence.rs
+src-tauri/src/lib.rs
+src-tauri/src/protection.rs
+tests/unit/intelligence-engine.test.ts
+types/financial-intelligence.ts
+types/relatorios.ts
+FASE_11_ARQUIVOS.txt
+
+Este pacote nao contem o projeto completo. Extraia na raiz preservando os caminhos.

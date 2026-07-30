@@ -53,7 +53,7 @@ export function ReportsToolbar({
           <span>{reportsContent.toolbar.scenario}</span>
           <select value={scenario} onChange={(event) => onScenarioChange(event.target.value as ProjectionScenario)}>
             <option value="conservative">{reportsContent.scenarios.conservative.label}</option>
-            <option value="realistic">{reportsContent.scenarios.realistic.label}</option>
+            <option value="expected">{reportsContent.scenarios.expected.label}</option>
             <option value="optimistic">{reportsContent.scenarios.optimistic.label}</option>
           </select>
           <small>{reportsContent.scenarios[scenario].helper}</small>
