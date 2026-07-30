@@ -26,6 +26,7 @@ export default defineConfig({
         "lib/portable-package.ts",
         "lib/spreadsheet.ts",
         "lib/desktop/file-transfer.ts",
+        "lib/automation-engine.ts",
       ],
       exclude: ["**/*.d.ts", "tests/**"],
       thresholds: {

@@ -10,13 +10,15 @@ import type {
 export const dataToolsContent = {
   heading: {
     eyebrow: "Organização dos dados",
-    title: "Importação, exportação e regras",
+    title: "Dados e automações locais",
     description:
-      "Traga extratos para a dashboard, mantenha cópias dos seus dados e automatize a categorização dos lançamentos.",
+      "Simule rotinas financeiras, programe recorrências, importe extratos e mantenha cópias protegidas dos seus dados.",
     sample: "Usar arquivo de exemplo",
     backup: "Gerar backup completo",
   },
   views: {
+    automations: "Central",
+    recurrences: "Recorrências",
     import: "Importar",
     export: "Exportar",
     portability: "Portabilidade",
@@ -145,7 +147,7 @@ export const dataToolsContent = {
   rules: {
     title: "Regras automáticas",
     description:
-      "Crie condições para preencher categoria, conta ou tipo sempre que uma movimentação compatível for importada.",
+      "Crie condições para preencher categoria, conta ou tipo em importações e nos lançamentos já existentes, sempre com prévia antes da aplicação.",
     newRule: "Nova regra",
     active: "Ativa",
     paused: "Pausada",

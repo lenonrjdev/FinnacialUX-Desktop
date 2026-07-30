@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 6;
+const CURRENT_SCHEMA_VERSION: i64 = 7;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -31,6 +31,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (4, "encrypt_database_with_sqlcipher_and_key_rotation", include_str!("../migrations/0004_database_encryption.sql")),
     (5, "add_import_export_and_portability_history", include_str!("../migrations/0005_data_portability.sql")),
     (6, "add_integrity_recovery_and_continuity_controls", include_str!("../migrations/0006_data_continuity.sql")),
+    (7, "add_local_automation_engine", include_str!("../migrations/0007_local_automation_engine.sql")),
 ];
 
 #[derive(Default)]
@@ -1260,7 +1261,7 @@ mod regression_tests {
     use sqlx::Connection;
 
     #[tokio::test]
-    async fn migrations_reach_schema_six_and_are_idempotent() {
+    async fn migrations_reach_schema_seven_and_are_idempotent() {
         let mut connection = SqliteConnectOptions::new()
             .filename(":memory:")
             .create_if_missing(true)
@@ -1286,6 +1287,9 @@ mod regression_tests {
         assert_eq!(pragma, CURRENT_SCHEMA_VERSION);
         assert!(table_exists(&mut connection, "portability_operations").await.unwrap());
         assert!(table_exists(&mut connection, "continuity_recovery_points").await.unwrap());
+        assert!(table_exists(&mut connection, "automation_runs").await.unwrap());
+        assert!(table_exists(&mut connection, "automation_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "automation_alert_states").await.unwrap());
     }
 
     #[test]

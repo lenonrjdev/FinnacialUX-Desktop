@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AutomationCenterPanel } from "@/components/dados-e-automacoes/automation-center-panel";
+import { RecurrenceDialog } from "@/components/dados-e-automacoes/recurrence-dialog";
+import { RecurrencesPanel } from "@/components/dados-e-automacoes/recurrences-panel";
 import { DataToolsHeading } from "@/components/dados-e-automacoes/data-tools-heading";
 import { DataToolsSummary } from "@/components/dados-e-automacoes/data-tools-summary";
 import { DataToolsToolbar } from "@/components/dados-e-automacoes/data-tools-toolbar";
@@ -15,6 +18,7 @@ import { CheckIcon } from "@/components/shared/icons";
 import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { useFinanceDataState, useFinanceDataStatus } from "@/components/providers/finance-data-provider";
 import { dataToolsContent } from "@/content/dados-e-automacoes";
+import { automationsContent } from "@/content/automations";
 import { initialAccounts } from "@/data/contas";
 import { transactionsData } from "@/data/lancamentos";
 import { initialCreditCards, initialCardInvoices, initialCardPurchases } from "@/data/cartoes";
@@ -23,7 +27,7 @@ import { initialReceivables } from "@/data/recebimentos";
 import { initialGoals, initialGoalContributions } from "@/data/metas";
 import { initialDebts, initialDebtPayments } from "@/data/dividas";
 import { initialSubscriptions, initialSubscriptionCharges } from "@/data/assinaturas";
-import { dataToolsReferenceDate, initialAutomationRules, initialImportHistory } from "@/data/dados-e-automacoes";
+import { dataToolsReferenceDate, initialAutomationRules, initialImportHistory, initialRecurringTemplates } from "@/data/dados-e-automacoes";
 import { initialCategories, initialMonthlyBudgets } from "@/data/orcamentos";
 import {
   buildAllExportTables,
@@ -58,15 +62,17 @@ import type {
   RuleTestResult,
 } from "@/types/dados-e-automacoes";
 import type { FinancialTransaction } from "@/types/lancamentos";
+import type { RecurringTransactionTemplate, RecurringTransactionTemplateInput } from "@/types/desktop-automations";
 
 export default function DadosEAutomacoesView() {
   const { confirmSensitiveAction } = useDesktopSecurity();
-  const { reload } = useFinanceDataStatus();
-  const [view, setView] = useState<DataToolsView>("import");
+  const { reload, saving, readOnly } = useFinanceDataStatus();
+  const [view, setView] = useState<DataToolsView>("automations");
   const [parsed, setParsed] = useState<ImportParseResult | null>(null);
   const [mapping, setMapping] = useState<CsvMapping>({});
   const [rows, setRows] = useState<ImportTransactionRow[]>([]);
   const [rules, setRules] = useFinanceDataState<AutomationRule[]>("automation-rules", initialAutomationRules);
+  const [recurringTemplates, setRecurringTemplates] = useFinanceDataState<RecurringTransactionTemplate[]>("recurring-templates", initialRecurringTemplates);
   const [history] = useFinanceDataState<ImportHistoryItem[]>("import-history", initialImportHistory);
   const [transactions] = useFinanceDataState<FinancialTransaction[]>("transactions", transactionsData);
   const [cards] = useFinanceDataState("credit-cards", initialCreditCards);
@@ -86,6 +92,8 @@ export default function DadosEAutomacoesView() {
   const [testResults, setTestResults] = useState<RuleTestResult[]>([]);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [recurrenceDialogOpen, setRecurrenceDialogOpen] = useState(false);
+  const [editingRecurrence, setEditingRecurrence] = useState<RecurringTransactionTemplate | null>(null);
   const [feedback, setFeedback] = useState("");
   const [operationBusy, setOperationBusy] = useState(false);
   const [exportConfiguration, setExportConfiguration] = useState<ExportConfiguration>({
@@ -125,10 +133,10 @@ export default function DadosEAutomacoesView() {
     setTestResults(testAutomationRules(rules, rows, transactions));
   }, [rows, rules, transactions]);
 
-  function showFeedback(message: string) {
+  const showFeedback = useCallback((message: string) => {
     setFeedback(message);
     window.setTimeout(() => setFeedback(""), 3200);
-  }
+  }, []);
 
   function updateRows(nextParsed: ImportParseResult, nextMapping: CsvMapping, nextRules = rules) {
     setRows(buildImportRows(nextParsed.records, nextMapping, nextRules, transactions));
@@ -363,6 +371,45 @@ export default function DadosEAutomacoesView() {
     if (parsed) updateRows(parsed, mapping, nextRules);
   }
 
+
+  function openNewRecurrence() {
+    if (readOnly || saving) return;
+    setEditingRecurrence(null);
+    setRecurrenceDialogOpen(true);
+  }
+
+  function submitRecurrence(input: RecurringTransactionTemplateInput) {
+    if (readOnly || saving) return;
+    if (editingRecurrence) {
+      setRecurringTemplates((current) => current.map((template) => template.id === editingRecurrence.id
+        ? { ...template, ...input, transaction: input.transaction }
+        : template));
+      showFeedback(automationsContent.feedback.recurrenceUpdated);
+    } else {
+      setRecurringTemplates((current) => [...current, {
+        ...input,
+        id: `recurrence-${crypto.randomUUID()}`,
+        createdAt: new Date().toISOString(),
+      }]);
+      showFeedback(automationsContent.feedback.recurrenceCreated);
+    }
+    setRecurrenceDialogOpen(false);
+    setEditingRecurrence(null);
+  }
+
+  function toggleRecurrence(template: RecurringTransactionTemplate) {
+    if (readOnly || saving) return;
+    setRecurringTemplates((current) => current.map((item) => item.id === template.id
+      ? { ...item, active: !item.active }
+      : item));
+  }
+
+  function deleteRecurrence(template: RecurringTransactionTemplate) {
+    if (readOnly || saving) return;
+    setRecurringTemplates((current) => current.filter((item) => item.id !== template.id));
+    showFeedback(automationsContent.feedback.recurrenceRemoved);
+  }
+
   function runRuleTest() {
     setTestResults(testAutomationRules(rules, rows, transactions));
     showFeedback(dataToolsContent.feedback.rulesTested);
@@ -373,6 +420,26 @@ export default function DadosEAutomacoesView() {
       <DataToolsHeading onSample={loadSample} onBackup={() => void exportData(true)} />
       <DataToolsSummary previewRows={rows.length} activeRules={activeRules} history={history} />
       <DataToolsToolbar view={view} onChange={setView} />
+
+      {view === "automations" ? (
+        <AutomationCenterPanel
+          saving={saving}
+          readOnly={readOnly}
+          onReloadFinance={reload}
+          onFeedback={showFeedback}
+        />
+      ) : null}
+
+      {view === "recurrences" ? (
+        <RecurrencesPanel
+          templates={recurringTemplates}
+          readOnly={readOnly || saving}
+          onCreate={openNewRecurrence}
+          onEdit={(template) => { if (readOnly || saving) return; setEditingRecurrence(template); setRecurrenceDialogOpen(true); }}
+          onToggle={toggleRecurrence}
+          onDelete={deleteRecurrence}
+        />
+      ) : null}
 
       {view === "import" ? (
         <div className="import-workspace">
@@ -416,6 +483,7 @@ export default function DadosEAutomacoesView() {
       {view === "history" ? <ImportHistory history={history} /> : null}
 
       {ruleDialogOpen ? <RuleDialog editing={editingRule} categories={categories} accounts={accounts} onClose={() => { setRuleDialogOpen(false); setEditingRule(null); }} onSubmit={submitRule} /> : null}
+      {recurrenceDialogOpen ? <RecurrenceDialog editing={editingRecurrence} categories={categories} accounts={accounts} onClose={() => { setRecurrenceDialogOpen(false); setEditingRecurrence(null); }} onSubmit={submitRecurrence} /> : null}
 
       {feedback ? <div className="transaction-feedback data-tools-feedback"><CheckIcon />{feedback}</div> : null}
     </div>

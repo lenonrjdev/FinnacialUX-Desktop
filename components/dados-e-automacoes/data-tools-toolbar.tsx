@@ -3,12 +3,15 @@ import {
   ClockIcon,
   DownloadIcon,
   MagicWandIcon,
+  RefreshIcon,
   UploadIcon,
 } from "@/components/shared/icons";
 import { dataToolsContent } from "@/content/dados-e-automacoes";
 import type { DataToolsView } from "@/types/dados-e-automacoes";
 
 const tabs: Array<{ id: DataToolsView; icon: React.ReactNode }> = [
+  { id: "automations", icon: <MagicWandIcon /> },
+  { id: "recurrences", icon: <RefreshIcon /> },
   { id: "import", icon: <UploadIcon /> },
   { id: "export", icon: <DownloadIcon /> },
   { id: "portability", icon: <ArchiveIcon /> },

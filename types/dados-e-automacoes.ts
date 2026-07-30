@@ -1,4 +1,4 @@
-export type DataToolsView = "import" | "export" | "portability" | "rules" | "history";
+export type DataToolsView = "automations" | "recurrences" | "import" | "export" | "portability" | "rules" | "history";
 export type ImportSourceType = "csv" | "ofx" | "xlsx" | "xls" | "json" | "fuxportable";
 export type ImportRowType = "income" | "expense" | "transfer";
 export type ImportRowStatus = "ready" | "review" | "duplicate";

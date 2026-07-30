@@ -28,7 +28,7 @@ const BACKUP_EXTENSION: &str = "fuxbackup";
 const DIAGNOSTIC_EXTENSION: &str = "fuxdiag";
 const BACKUP_MAGIC_V2: &[u8] = b"FUXBACKUP2\n";
 const BACKUP_MAGIC_V3: &[u8] = b"FUXBACKUP3\n";
-const CURRENT_SCHEMA_VERSION: i64 = 6;
+const CURRENT_SCHEMA_VERSION: i64 = 7;
 const SESSION_MARKER_FILE: &str = "session-active.marker";
 
 #[derive(Default)]
@@ -431,6 +431,13 @@ async fn validate_connection(connection: &mut SqliteConnection) -> Result<Integr
             "continuity_preferences",
             "continuity_recovery_points",
             "continuity_events",
+        ]);
+    }
+    if version >= 7 {
+        required_tables.extend([
+            "automation_preferences",
+            "automation_runs",
+            "automation_alert_states",
         ]);
     }
 

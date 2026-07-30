@@ -22806,3 +22806,557 @@ html[data-theme="dark"] .continuity-error {
     flex: 1;
   }
 }
+
+/* =========================================================
+   FASE 10 — AUTOMAÇÕES FINANCEIRAS LOCAIS
+========================================================= */
+.automation-center-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.automation-center-main,
+.automation-center-sidebar {
+  min-width: 0;
+}
+
+.automation-center-sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.automation-center-header,
+.automation-section-header {
+  align-items: flex-start;
+}
+
+.automation-center-actions,
+.automation-section-header > div:last-child {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.automation-center-actions button,
+.automation-section-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.automation-center-actions svg,
+.automation-read-only-note svg,
+.data-tools-error svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.automation-read-only-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #f2d28b;
+  background: #fff9e9;
+  color: #785600;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.automation-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.automation-summary-grid > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 9px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1px solid #e8e9ec;
+  background: #fafafa;
+}
+
+.automation-summary-grid > div.featured {
+  background: #111214;
+  border-color: #111214;
+  color: #fff;
+}
+
+.automation-summary-grid svg {
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+}
+
+.automation-summary-grid span {
+  color: #777b83;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.automation-summary-grid strong {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.automation-summary-grid .featured span {
+  color: #bfc2c8;
+}
+
+.automation-preview-section {
+  border-top: 1px solid #ececef;
+  padding-top: 20px;
+}
+
+.automation-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.automation-section-header h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.automation-section-header p {
+  margin: 5px 0 0;
+  color: #747982;
+  font-size: 13px;
+}
+
+.automation-section-header button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #dedfe3;
+  background: #fff;
+  color: #292b30;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.automation-candidate-list,
+.automation-alert-list,
+.automation-run-list,
+.recurrence-list {
+  display: grid;
+  gap: 10px;
+}
+
+.automation-candidate-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid #e4e5e8;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .18s ease, transform .18s ease, background .18s ease;
+}
+
+.automation-candidate-card:hover {
+  transform: translateY(-1px);
+  border-color: #b8bbc1;
+}
+
+.automation-candidate-card.selected {
+  border-color: #18191c;
+  background: #f8f8f8;
+}
+
+.automation-candidate-card > input {
+  width: 17px;
+  height: 17px;
+  margin-top: 5px;
+  accent-color: #111214;
+}
+
+.automation-candidate-icon,
+.recurrence-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: #f0f1f3;
+  color: #202226;
+}
+
+.automation-candidate-icon svg,
+.recurrence-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.automation-candidate-card > div:last-child {
+  min-width: 0;
+}
+
+.automation-candidate-card > div > div {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.automation-candidate-card strong,
+.automation-alert-card strong,
+.automation-run-list strong,
+.recurrence-card strong {
+  color: #17181b;
+  font-size: 13px;
+}
+
+.automation-candidate-card > div > div > span {
+  padding: 3px 7px;
+  background: #eef0f2;
+  color: #62666e;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.automation-candidate-card p,
+.automation-alert-card p {
+  margin: 4px 0;
+  color: #666b74;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.automation-candidate-card small,
+.automation-alert-card small,
+.automation-run-list small,
+.recurrence-meta span {
+  color: #8a8e95;
+  font-size: 11px;
+}
+
+.automation-alert-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-left: 3px solid #b7bbc2;
+  background: #f8f8f9;
+}
+
+.automation-alert-card.warning { border-left-color: #d59519; }
+.automation-alert-card.critical { border-left-color: #cf3d3d; }
+.automation-alert-card.info { border-left-color: #4e74b8; }
+
+.automation-alert-card > svg {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+}
+
+.automation-alert-card > div:last-child {
+  grid-column: 2;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.automation-alert-card button,
+.automation-run-list button,
+.recurrence-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #dedfe3;
+  background: #fff;
+  color: #383b41;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.automation-alert-card button svg,
+.recurrence-actions button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.automation-preferences-form {
+  display: grid;
+  gap: 12px;
+}
+
+.automation-preferences-form > label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #464a52;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.automation-preferences-form input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #111214;
+}
+
+.automation-days-field {
+  justify-content: space-between;
+}
+
+.automation-days-field input {
+  width: 70px;
+  min-height: 34px;
+  border: 1px solid #dedfe3;
+  padding: 0 9px;
+  background: #fff;
+}
+
+.automation-run-list > article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #ececef;
+}
+
+.automation-run-list > article:last-child {
+  border-bottom: 0;
+}
+
+.automation-run-list > article > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.automation-run-list > article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.automation-run-list > article > div > span {
+  color: #62666e;
+  font-size: 11px;
+}
+
+.automation-run-status {
+  padding: 3px 6px;
+  background: #eef0f2;
+  color: #5d626a;
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.automation-run-status.applied { background: #e9f5ed; color: #267740; }
+.automation-run-status.undone { background: #f1f1f3; color: #5d626a; }
+.automation-run-status.failed { background: #faeaea; color: #a73535; }
+
+.automation-run-list button {
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+
+.recurrence-panel {
+  min-height: 360px;
+}
+
+.recurrence-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #e4e5e8;
+  background: #fff;
+}
+
+.recurrence-card.paused {
+  opacity: .66;
+  background: #f8f8f8;
+}
+
+.recurrence-content > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recurrence-content > div:first-child > span {
+  color: #767b84;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.recurrence-content > p {
+  margin: 5px 0 10px;
+  color: #636872;
+  font-size: 13px;
+}
+
+.recurrence-meta {
+  display: flex;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+}
+
+.recurrence-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.recurrence-actions button.danger {
+  color: #a53636;
+}
+
+.recurrence-dialog {
+  max-width: 820px;
+}
+
+.recurrence-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recurrence-form-grid .rule-name-field,
+.recurrence-form-grid .rule-value-field {
+  grid-column: span 2;
+}
+
+@media (max-width: 1180px) {
+  .automation-center-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .automation-center-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .automation-history-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 820px) {
+  .automation-summary-grid,
+  .automation-center-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .automation-center-header,
+  .automation-section-header,
+  .recurrence-card {
+    grid-template-columns: 1fr;
+  }
+
+  .automation-center-header,
+  .automation-section-header {
+    display: grid;
+  }
+
+  .automation-center-actions,
+  .automation-section-header > div:last-child,
+  .recurrence-actions {
+    justify-content: flex-start;
+  }
+
+  .recurrence-card {
+    display: grid;
+  }
+
+  .recurrence-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .automation-summary-grid,
+  .automation-center-sidebar,
+  .recurrence-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recurrence-form-grid .rule-name-field,
+  .recurrence-form-grid .rule-value-field {
+    grid-column: auto;
+  }
+
+  .automation-candidate-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .automation-candidate-card > input {
+    grid-row: span 2;
+  }
+
+  .automation-candidate-icon {
+    display: none;
+  }
+}
+
+html[data-theme="dark"] .automation-summary-grid > div,
+html[data-theme="dark"] .automation-candidate-card,
+html[data-theme="dark"] .automation-alert-card,
+html[data-theme="dark"] .recurrence-card,
+html[data-theme="dark"] .automation-section-header button,
+html[data-theme="dark"] .automation-alert-card button,
+html[data-theme="dark"] .automation-run-list button,
+html[data-theme="dark"] .recurrence-actions button,
+html[data-theme="dark"] .automation-days-field input {
+  border-color: #34373d;
+  background: #202226;
+  color: #e9eaed;
+}
+
+html[data-theme="dark"] .automation-summary-grid > div.featured {
+  background: #eceef1;
+  border-color: #eceef1;
+  color: #17181b;
+}
+
+html[data-theme="dark"] .automation-candidate-card.selected {
+  border-color: #e4e6e9;
+  background: #292c31;
+}
+
+html[data-theme="dark"] .automation-candidate-card strong,
+html[data-theme="dark"] .automation-alert-card strong,
+html[data-theme="dark"] .automation-run-list strong,
+html[data-theme="dark"] .recurrence-card strong,
+html[data-theme="dark"] .automation-section-header h3 {
+  color: #f0f1f3;
+}
+
+html[data-theme="dark"] .automation-candidate-card p,
+html[data-theme="dark"] .automation-alert-card p,
+html[data-theme="dark"] .automation-section-header p,
+html[data-theme="dark"] .automation-preferences-form > label,
+html[data-theme="dark"] .recurrence-content > p {
+  color: #aeb2ba;
+}
+
+html[data-theme="dark"] .automation-candidate-icon,
+html[data-theme="dark"] .recurrence-icon,
+html[data-theme="dark"] .automation-candidate-card > div > div > span,
+html[data-theme="dark"] .automation-run-status {
+  background: #30333a;
+  color: #c7cad0;
+}

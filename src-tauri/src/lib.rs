@@ -4,6 +4,7 @@ mod protection;
 mod security;
 mod portability;
 mod continuity;
+mod automations;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -162,6 +163,13 @@ pub fn run() {
             continuity::continuity_run_startup_check,
             continuity::continuity_exit_read_only,
             continuity::continuity_get_status,
+            automations::automation_get_preferences,
+            automations::automation_save_preferences,
+            automations::automation_simulate,
+            automations::automation_apply,
+            automations::automation_list_runs,
+            automations::automation_undo_run,
+            automations::automation_mark_alert,
         ])
         .setup(|app| {
             let local_data_dir = app

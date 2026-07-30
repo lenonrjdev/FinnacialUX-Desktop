@@ -1,10 +1,10 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLCipher. A versão `0.8.0` reúne criptografia integral do banco local, Stronghold,
+React, TypeScript e SQLCipher. A versão `0.10.0` reúne criptografia integral do banco local, Stronghold,
 Argon2id, PIN, backups criptografados, atualizações assinadas, integração
 nativa com o Windows, acessibilidade, portabilidade protegida dos dados e uma
-suíte automatizada de regressão para os fluxos críticos.
+suíte automatizada de regressão, continuidade de dados e automações financeiras locais reversíveis.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -128,6 +128,8 @@ Leia também:
 - `FASE_5_DESKTOP_DISTRIBUICAO_ATUALIZACOES.md`;
 - `FASE_6_DESKTOP_EXPERIENCIA_ACESSIBILIDADE.md`;
 - `FASE_7_DESKTOP_PORTABILIDADE_DADOS.md`;
+- `FASE_9_DESKTOP_CONTINUIDADE_RECUPERACAO.md`;
+- `FASE_10_DESKTOP_AUTOMACOES_FINANCEIRAS.md`;
 - `docs/OPERACAO_BACKUP_RECUPERACAO.md`;
 - `docs/SEGURANCA_LOCAL.md`;
 - `docs/CRIPTOGRAFIA_BANCO_SQLCIPHER.md`;
@@ -173,3 +175,16 @@ Acesse **Dados e automações → Portabilidade** para gerar modelos, exportar u
 planilha completa, criar um pacote portátil ou desfazer uma importação pelo
 histórico local. O pacote portátil não contém PIN, senha, chave SQLCipher ou
 segredos do Stronghold.
+
+
+## Fase 9 — continuidade e recuperação
+
+A versão `0.9.0` adiciona pontos de recuperação SQLCipher, restauração atômica,
+retenção protegida e modo somente leitura quando a integridade do banco falha.
+
+## Fase 10 — automações financeiras locais
+
+A versão `0.10.0` adiciona simulação de regras, sugestões conservadoras pelo
+histórico local, lançamentos recorrentes, alertas de vencimento e execuções reversíveis. Acesse **Dados e automações → Central**.
+As alterações só são aplicadas depois de uma prévia com checksum e são
+bloqueadas automaticamente quando a continuidade ativa o modo somente leitura.

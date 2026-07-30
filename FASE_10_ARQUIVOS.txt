@@ -1,0 +1,54 @@
+FINNACIALUX DESKTOP — FASE 10 — ARQUIVOS NOVOS E ALTERADOS
+Versao de destino: 0.10.0
+Schema de destino: 7
+Total: 33 arquivos
+
+RAIZ
+- 11_APLICAR_FASE_10.cmd
+- 11_VALIDAR_FASE_10.cmd
+- FASE_10_DESKTOP_AUTOMACOES_FINANCEIRAS.md
+- FASE_10_ARQUIVOS.txt
+- README.md
+
+INTERFACE
+- app/globals.css
+- components/dados-e-automacoes/automation-center-panel.tsx
+- components/dados-e-automacoes/dados-e-automacoes-view.tsx
+- components/dados-e-automacoes/data-tools-toolbar.tsx
+- components/dados-e-automacoes/recurrence-dialog.tsx
+- components/dados-e-automacoes/recurrences-panel.tsx
+- components/providers/finance-data-provider.tsx
+- content/automations.ts
+- content/dados-e-automacoes.ts
+- data/dados-e-automacoes.ts
+
+DOMINIO E ADAPTADORES
+- lib/automation-engine.ts
+- lib/desktop/auth.ts
+- lib/desktop/automations.ts
+- types/dados-e-automacoes.ts
+- types/desktop-automations.ts
+
+BANCO E NUCLEO NATIVO
+- src-tauri/migrations/0007_local_automation_engine.sql
+- src-tauri/src/automations.rs
+- src-tauri/src/continuity.rs
+- src-tauri/src/encrypted_database.rs
+- src-tauri/src/lib.rs
+- src-tauri/src/protection.rs
+
+TESTES E AUTOMACAO
+- tests/unit/automation-engine.test.ts
+- vitest.config.ts
+- scripts/11_APLICAR_FASE_10.ps1
+- scripts/11_FINALIZAR_FASE_10.mjs
+- scripts/11_VALIDAR_FASE_10.ps1
+
+DOCUMENTACAO E RELEASE
+- docs/AUTOMACOES_FINANCEIRAS_LOCAIS.md
+- release/RELEASE_NOTES_0_10_0.md
+
+OBSERVACAO
+package.json, package-lock.json, src-tauri/Cargo.toml e src-tauri/tauri.conf.json
+sao atualizados para 0.10.0 por 11_APLICAR_FASE_10.cmd, preservando a arvore
+de dependencias auditada e sem adicionar pacotes npm ou crates Rust.

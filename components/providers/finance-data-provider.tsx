@@ -34,6 +34,7 @@ export type FinanceDataModule =
   | "subscriptions"
   | "subscription-charges"
   | "automation-rules"
+  | "recurring-templates"
   | "import-history"
   | "workspace-settings"
   | "backup-snapshots";

@@ -188,6 +188,13 @@ export const desktopAuth = {
       ) VALUES ($1, 'system', $2, NULL, 0, 0, 1, 1, 1, 1, 1, 1, 1, 3, 0, $3)`,
       [userId, workspaceId, now],
     );
+    await database.execute(
+      `INSERT INTO automation_preferences (
+        workspace_id, simulation_required, startup_scan_enabled, due_window_days,
+        alert_overdue, alert_upcoming, last_run_at, updated_at
+      ) VALUES ($1, 1, 1, 7, 1, 1, NULL, $2)`,
+      [workspaceId, now],
+    );
 
     await ensureDeviceBackupKey();
     saveLocalSessionUserId(userId, true);
