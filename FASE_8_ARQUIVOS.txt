@@ -1,0 +1,31 @@
+FINNACIALUX DESKTOP — FASE 8
+Versão: 0.8.0
+Arquivos incrementais: 27
+
+.github/workflows/quality-desktop.yml
+.gitignore
+08_VALIDAR_QUALIDADE.cmd
+components/dados-e-automacoes/portability-panel.tsx
+docs/TESTES_E_REGRESSAO.md
+FASE_8_ARQUIVOS.txt
+FASE_8_DESKTOP_TESTES_REGRESSAO.md
+lib/data-tools.ts
+package.json
+playwright.config.ts
+README.md
+release/RELEASE_NOTES_0_8_0.md
+scripts/08_VALIDAR_QUALIDADE.ps1
+scripts/serve-static.mjs
+src-tauri/Cargo.toml
+src-tauri/src/encrypted_database.rs
+src-tauri/src/portability.rs
+src-tauri/tauri.conf.json
+tests/e2e/public-routes.spec.ts
+tests/fixtures/importacao.csv
+tests/fixtures/importacao.ofx
+tests/setup.ts
+tests/unit/data-tools.test.ts
+tests/unit/file-transfer.test.ts
+tests/unit/portable-package.test.ts
+tests/unit/spreadsheet.test.ts
+vitest.config.ts

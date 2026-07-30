@@ -1,0 +1,78 @@
+name: Qualidade do FinnacialUX Desktop
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-regression:
+    name: Web, unidade e E2E
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependências
+        shell: pwsh
+        run: npm install
+
+      - name: Instalar Chromium
+        shell: pwsh
+        run: npx playwright install chromium
+
+      - name: Validar web e cobertura
+        shell: pwsh
+        run: npm run check:web
+
+      - name: Executar testes ponta a ponta
+        shell: pwsh
+        run: npm run test:e2e
+
+      - name: Publicar relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-web-regressao
+          if-no-files-found: ignore
+          path: |
+            coverage/
+            playwright-report/
+            test-results/
+
+  native-regression:
+    name: Rust, SQLCipher e migrations
+    runs-on: windows-latest
+    timeout-minutes: 55
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Preparar Rust MSVC
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache do Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Validar biblioteca nativa
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+
+      - name: Verificar aplicativo Tauri
+        shell: pwsh
+        run: cargo check --manifest-path src-tauri/Cargo.toml

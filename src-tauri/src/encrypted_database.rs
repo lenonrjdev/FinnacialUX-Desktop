@@ -1038,3 +1038,61 @@ pub async fn replace_from_plaintext_snapshot(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+    use sqlx::Connection;
+
+    #[tokio::test]
+    async fn migrations_reach_schema_five_and_are_idempotent() {
+        let mut connection = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .create_if_missing(true)
+            .foreign_keys(true)
+            .connect()
+            .await
+            .expect("abre SQLite temporário");
+
+        let first = apply_migrations(&mut connection).await.expect("aplica migrations");
+        let second = apply_migrations(&mut connection).await.expect("repete migrations");
+        let history = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM fux_schema_migrations")
+            .fetch_one(&mut connection)
+            .await
+            .expect("lê histórico");
+        let pragma = sqlx::query_scalar::<_, i64>("PRAGMA user_version")
+            .fetch_one(&mut connection)
+            .await
+            .expect("lê versão");
+
+        assert_eq!(first, CURRENT_SCHEMA_VERSION);
+        assert_eq!(second, CURRENT_SCHEMA_VERSION);
+        assert_eq!(history, CURRENT_SCHEMA_VERSION);
+        assert_eq!(pragma, CURRENT_SCHEMA_VERSION);
+        assert!(table_exists(&mut connection, "portability_operations").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn sqlcipher_hides_header_and_rejects_wrong_key() {
+        let directory = tempfile::tempdir().expect("cria pasta temporária");
+        let path = directory.path().join("regression.db");
+        let key = [0x31_u8; 32];
+        let wrong_key = [0x47_u8; 32];
+
+        let mut connection = encrypted_options(&path, &key, true)
+            .connect()
+            .await
+            .expect("abre SQLCipher");
+        apply_migrations(&mut connection).await.expect("aplica schema protegido");
+        sqlx::query("INSERT INTO users (id, name, email, password_hash, password_salt, created_at, updated_at) VALUES ('u1', 'Teste', 'teste@local', 'hash', 'salt', '2026-07-29', '2026-07-29')")
+            .execute(&mut connection)
+            .await
+            .expect("grava dado protegido");
+        connection.close().await.expect("fecha banco");
+
+        let bytes = fs::read(&path).expect("lê arquivo");
+        assert!(!bytes.starts_with(b"SQLite format 3\0"));
+        assert!(verify_encrypted_database(&path, &key).await.is_ok());
+        assert!(verify_encrypted_database(&path, &wrong_key).await.is_err());
+    }
+}

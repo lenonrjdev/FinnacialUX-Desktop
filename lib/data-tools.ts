@@ -296,7 +296,7 @@ export function buildExportTable(dataset: Exclude<ExportDataset, "full-backup">,
 export function buildFullBackup(data: FinancialExportData) {
   return {
     generatedAt: new Date().toISOString(),
-    version: "0.7.0-portabilidade",
+    version: "0.8.0-regressao",
     transactions: data.transactions,
     accounts: data.accounts,
     cards: { cards: data.cards, invoices: data.cardInvoices, purchases: data.cardPurchases },

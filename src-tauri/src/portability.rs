@@ -402,3 +402,160 @@ pub fn portability_undo_operation(
         undo_operation_internal(&app, workspace_id, operation_id).await
     })
 }
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+    use serde_json::json;
+    use sqlx::{Connection, SqliteConnection};
+
+    async fn test_database() -> SqliteConnection {
+        let mut connection = SqliteConnection::connect(":memory:")
+            .await
+            .expect("abre banco temporário");
+        sqlx::raw_sql(
+            r#"
+            PRAGMA foreign_keys = ON;
+            CREATE TABLE workspaces (
+              id TEXT PRIMARY KEY NOT NULL,
+              last_activity_at TEXT NOT NULL
+            );
+            CREATE TABLE finance_documents (
+              workspace_id TEXT NOT NULL,
+              module TEXT NOT NULL,
+              data_json TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              PRIMARY KEY (workspace_id, module),
+              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+            );
+            CREATE TABLE portability_operations (
+              id TEXT PRIMARY KEY NOT NULL,
+              workspace_id TEXT NOT NULL,
+              direction TEXT NOT NULL,
+              format TEXT NOT NULL,
+              dataset TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              checksum_sha256 TEXT,
+              records_total INTEGER NOT NULL DEFAULT 0,
+              records_applied INTEGER NOT NULL DEFAULT 0,
+              records_rejected INTEGER NOT NULL DEFAULT 0,
+              affected_modules_json TEXT NOT NULL DEFAULT '[]',
+              undo_snapshot_json TEXT,
+              status TEXT NOT NULL,
+              reversible INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL,
+              completed_at TEXT,
+              error_message TEXT,
+              FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+            );
+            INSERT INTO workspaces (id, last_activity_at) VALUES ('workspace-1', '2026-07-29');
+            "#,
+        )
+        .execute(&mut connection)
+        .await
+        .expect("cria schema de teste");
+        connection
+    }
+
+    fn operation_input() -> PortabilityOperationInput {
+        PortabilityOperationInput {
+            id: Some("port-test".to_string()),
+            direction: "import".to_string(),
+            format: "csv".to_string(),
+            dataset: "transactions".to_string(),
+            file_name: "extrato.csv".to_string(),
+            checksum_sha256: Some("abc".to_string()),
+            records_total: None,
+            records_applied: None,
+            records_rejected: None,
+            affected_modules: None,
+            status: None,
+            reversible: None,
+            error_message: None,
+        }
+    }
+
+    #[test]
+    fn counts_records_and_normalizes_reversible_operation() {
+        let documents = Map::from_iter([
+            ("transactions".to_string(), json!([{ "id": "1" }, { "id": "2" }])),
+            ("preferences".to_string(), json!({ "currency": "BRL" })),
+            ("empty".to_string(), Value::Null),
+        ]);
+        let modules = documents.keys().cloned().collect::<Vec<_>>();
+        let operation = normalize_operation(
+            "workspace-1",
+            operation_input(),
+            modules,
+            count_records(&documents),
+            Some(true),
+        );
+
+        assert_eq!(operation.records_total, 3);
+        assert_eq!(operation.records_applied, 3);
+        assert!(operation.reversible);
+        assert_eq!(operation.status, "completed");
+    }
+
+    #[tokio::test]
+    async fn stores_snapshot_and_reads_documents_without_data_loss() {
+        let mut connection = test_database().await;
+        let snapshot = Map::from_iter([
+            ("transactions".to_string(), json!([{ "id": "old", "amount": 10 }])),
+            ("accounts".to_string(), json!([{ "id": "acc-1" }])),
+        ]);
+        for (module, data) in &snapshot {
+            sqlx::query("INSERT INTO finance_documents (workspace_id, module, data_json, updated_at) VALUES ($1, $2, $3, $4)")
+                .bind("workspace-1")
+                .bind(module)
+                .bind(serde_json::to_string(data).unwrap())
+                .bind("2026-07-29")
+                .execute(&mut connection)
+                .await
+                .unwrap();
+        }
+        let operation = normalize_operation(
+            "workspace-1",
+            operation_input(),
+            vec!["transactions".to_string()],
+            1,
+            Some(true),
+        );
+        insert_operation(&mut connection, &operation, Some(&snapshot)).await.unwrap();
+
+        let current = read_documents(&mut connection, "workspace-1").await.unwrap();
+        let stored_snapshot = sqlx::query_scalar::<_, String>(
+            "SELECT undo_snapshot_json FROM portability_operations WHERE id = 'port-test'",
+        )
+        .fetch_one(&mut connection)
+        .await
+        .unwrap();
+
+        assert_eq!(current, snapshot);
+        assert_eq!(serde_json::from_str::<Map<String, Value>>(&stored_snapshot).unwrap(), snapshot);
+    }
+
+    #[tokio::test]
+    async fn foreign_key_failure_rolls_back_documents_and_history() {
+        let mut connection = test_database().await;
+        let mut transaction = connection.begin().await.unwrap();
+        let document_result = sqlx::query(
+            "INSERT INTO finance_documents (workspace_id, module, data_json, updated_at) VALUES ('missing', 'transactions', '[]', '2026-07-29')",
+        )
+        .execute(&mut *transaction)
+        .await;
+        assert!(document_result.is_err());
+        transaction.rollback().await.unwrap();
+
+        let document_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM finance_documents")
+            .fetch_one(&mut connection)
+            .await
+            .unwrap();
+        let operation_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM portability_operations")
+            .fetch_one(&mut connection)
+            .await
+            .unwrap();
+        assert_eq!(document_count, 0);
+        assert_eq!(operation_count, 0);
+    }
+}

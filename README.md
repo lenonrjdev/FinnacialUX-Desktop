@@ -1,9 +1,10 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLCipher. A versão `0.7.0` reúne criptografia integral do banco local, Stronghold,
+React, TypeScript e SQLCipher. A versão `0.8.0` reúne criptografia integral do banco local, Stronghold,
 Argon2id, PIN, backups criptografados, atualizações assinadas, integração
-nativa com o Windows, acessibilidade e portabilidade protegida dos dados.
+nativa com o Windows, acessibilidade, portabilidade protegida dos dados e uma
+suíte automatizada de regressão para os fluxos críticos.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -60,6 +61,30 @@ Na raiz do projeto:
 
 O Next.js é iniciado apenas como servidor de desenvolvimento e o Tauri abre a
 janela nativa. Não inicie pelo navegador para testar o SQLite do Desktop.
+
+
+## Validar a qualidade da Fase 8
+
+Na raiz do projeto, execute:
+
+```powershell
+.\08_VALIDAR_QUALIDADE.cmd
+```
+
+O comando instala as dependências necessárias e executa lint, TypeScript,
+testes unitários com cobertura, build estático, Playwright, testes Rust,
+validação das migrations e `cargo check`. Nenhuma correção de dependência é
+aplicada com `--force`.
+
+Relatórios locais:
+
+```text
+coverage/
+playwright-report/
+test-results/
+```
+
+Consulte também [`docs/TESTES_E_REGRESSAO.md`](docs/TESTES_E_REGRESSAO.md).
 
 ## Gerar o instalador
 

@@ -16,3 +16,10 @@ releases/
 *.key
 *.key.pub
 TAURI_SIGNING_PRIVATE_KEY*
+
+# Fase 8 — testes e artefatos de qualidade
+playwright-report/
+test-results/
+blob-report/
+coverage/
+*.lcov

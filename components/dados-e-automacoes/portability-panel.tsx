@@ -114,7 +114,7 @@ export function PortabilityPanel({
     setBusy("export-portable");
     try {
       const documents = await getWorkspaceDocuments();
-      let appVersion = "0.7.0";
+      let appVersion = "0.8.0";
       try { appVersion = await getVersion(); } catch { /* fallback para navegador */ }
       const payload = await buildPortablePayload({
         appVersion,

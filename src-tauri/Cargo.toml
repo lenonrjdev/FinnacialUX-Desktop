@@ -1,6 +1,6 @@
 [package]
 name = "finnacialux-desktop"
-version = "0.7.0"
+version = "0.8.0"
 description = "FinnacialUX Desktop — gestão financeira offline"
 authors = ["Ateliux"]
 edition = "2021"
@@ -42,7 +42,7 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-stronghold = "2"
 tauri-plugin-updater = "2"
 tempfile = "3"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "macros", "rt-multi-thread"] }
 zeroize = "1"
 uuid = { version = "1", features = ["v4"] }
 
