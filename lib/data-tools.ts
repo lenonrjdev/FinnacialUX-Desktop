@@ -296,7 +296,7 @@ export function buildExportTable(dataset: Exclude<ExportDataset, "full-backup">,
 export function buildFullBackup(data: FinancialExportData) {
   return {
     generatedAt: new Date().toISOString(),
-    version: "fase-15.2-postgresql",
+    version: "0.7.0-portabilidade",
     transactions: data.transactions,
     accounts: data.accounts,
     cards: { cards: data.cards, invoices: data.cardInvoices, purchases: data.cardPurchases },
@@ -307,6 +307,31 @@ export function buildFullBackup(data: FinancialExportData) {
     debts: { debts: data.debts, payments: data.debtPayments },
     subscriptions: { subscriptions: data.subscriptions, charges: data.subscriptionCharges },
   };
+}
+
+export function buildAllExportTables(startDate: string, endDate: string, data: FinancialExportData): Array<{ name: string; dataset: Exclude<ExportDataset, "full-backup">; table: ExportTable }> {
+  const datasets: Array<Exclude<ExportDataset, "full-backup">> = [
+    "transactions",
+    "accounts",
+    "cards",
+    "payables",
+    "receivables",
+    "budgets",
+    "goals",
+    "debts",
+    "subscriptions",
+  ];
+  return datasets.map((dataset) => ({
+    name: dataToolsContent.export.datasets[dataset],
+    dataset,
+    table: buildExportTable(dataset, startDate, endDate, data),
+  }));
+}
+
+export function tableToRecords(table: ExportTable): Array<Record<string, string | number | boolean>> {
+  return table.rows.map((row) => Object.fromEntries(
+    table.headers.map((header, index) => [header, row[index] ?? ""]),
+  ));
 }
 
 function escapeCsv(value: string | number | boolean, separator: string): string {

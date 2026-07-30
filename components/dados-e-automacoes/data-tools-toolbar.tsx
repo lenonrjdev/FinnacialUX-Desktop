@@ -1,4 +1,5 @@
 import {
+  ArchiveIcon,
   ClockIcon,
   DownloadIcon,
   MagicWandIcon,
@@ -10,6 +11,7 @@ import type { DataToolsView } from "@/types/dados-e-automacoes";
 const tabs: Array<{ id: DataToolsView; icon: React.ReactNode }> = [
   { id: "import", icon: <UploadIcon /> },
   { id: "export", icon: <DownloadIcon /> },
+  { id: "portability", icon: <ArchiveIcon /> },
   { id: "rules", icon: <MagicWandIcon /> },
   { id: "history", icon: <ClockIcon /> },
 ];

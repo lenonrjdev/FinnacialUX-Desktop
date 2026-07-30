@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestão financeira pessoal offline com SQLCipher, experiência nativa do Windows, acessibilidade e atualizações assinadas.",
+  "description": "FinnacialUX Desktop — gestão financeira pessoal offline com SQLCipher, importação, exportação e portabilidade protegida.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -26,7 +26,9 @@
     "@tauri-apps/plugin-updater": "^2.0.0",
     "@tauri-apps/plugin-autostart": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",
-    "@tauri-apps/plugin-window-state": "^2.0.0"
+    "@tauri-apps/plugin-window-state": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

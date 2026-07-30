@@ -22,13 +22,14 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 4;
+const CURRENT_SCHEMA_VERSION: i64 = 5;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
     (2, "add_data_protection_backups_and_diagnostics", include_str!("../migrations/0002_data_protection.sql")),
     (3, "add_stronghold_argon2_pin_lock_and_encrypted_backups", include_str!("../migrations/0003_local_security.sql")),
     (4, "encrypt_database_with_sqlcipher_and_key_rotation", include_str!("../migrations/0004_database_encryption.sql")),
+    (5, "add_import_export_and_portability_history", include_str!("../migrations/0005_data_portability.sql")),
 ];
 
 #[derive(Default)]

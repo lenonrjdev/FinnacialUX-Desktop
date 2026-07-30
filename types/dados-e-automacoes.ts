@@ -1,5 +1,5 @@
-export type DataToolsView = "import" | "export" | "rules" | "history";
-export type ImportSourceType = "csv" | "ofx";
+export type DataToolsView = "import" | "export" | "portability" | "rules" | "history";
+export type ImportSourceType = "csv" | "ofx" | "xlsx" | "xls" | "json" | "fuxportable";
 export type ImportRowType = "income" | "expense" | "transfer";
 export type ImportRowStatus = "ready" | "review" | "duplicate";
 
@@ -23,6 +23,8 @@ export interface ImportParseResult {
   fileName: string;
   headers: string[];
   records: RawImportRecord[];
+  worksheetNames?: string[];
+  selectedWorksheet?: string;
 }
 
 export interface ImportTransactionRow {
@@ -48,6 +50,9 @@ export interface ImportHistoryItem {
   ignoredRows: number;
   duplicateRows: number;
   status: "completed" | "partial";
+  operationId?: string;
+  reversible?: boolean;
+  undoneAt?: string;
 }
 
 export type ExportDataset =
@@ -62,7 +67,7 @@ export type ExportDataset =
   | "subscriptions"
   | "full-backup";
 
-export type ExportFormat = "csv" | "json";
+export type ExportFormat = "csv" | "json" | "xlsx";
 export type ExportSeparator = ";" | ",";
 
 export interface ExportConfiguration {
@@ -107,4 +112,92 @@ export interface RuleTestResult {
   ruleId: string;
   matches: number;
   examples: string[];
+}
+
+export type PortabilityDirection = "import" | "export" | "transfer" | "undo";
+export type PortabilityStatus = "completed" | "partial" | "failed" | "undone";
+export type PortableImportMode = "merge" | "replace";
+
+export interface PortabilityOperation {
+  id: string;
+  workspaceId: string;
+  direction: PortabilityDirection;
+  format: string;
+  dataset: string;
+  fileName: string;
+  checksumSha256: string | null;
+  recordsTotal: number;
+  recordsApplied: number;
+  recordsRejected: number;
+  affectedModules: string[];
+  status: PortabilityStatus;
+  reversible: boolean;
+  createdAt: string;
+  completedAt: string | null;
+  errorMessage: string | null;
+}
+
+export interface PortabilityOperationInput {
+  id?: string;
+  direction: PortabilityDirection;
+  format: string;
+  dataset: string;
+  fileName: string;
+  checksumSha256?: string | null;
+  recordsTotal?: number;
+  recordsApplied?: number;
+  recordsRejected?: number;
+  affectedModules?: string[];
+  status?: PortabilityStatus;
+  reversible?: boolean;
+  errorMessage?: string | null;
+}
+
+export interface PortablePackagePayload {
+  product: "FinnacialUX Desktop";
+  formatVersion: 1;
+  appVersion: string;
+  exportedAt: string;
+  sourceWorkspaceId: string;
+  documents: Record<string, unknown>;
+  documentChecksums: Record<string, string>;
+  totals: {
+    modules: number;
+    records: number;
+  };
+}
+
+export interface PortablePackageEnvelope {
+  magic: "FUXPORTABLE1";
+  formatVersion: 1;
+  encrypted: true;
+  algorithm: "PBKDF2-SHA256+AES-256-GCM";
+  kdf: {
+    iterations: number;
+    saltB64: string;
+  };
+  cipher: {
+    ivB64: string;
+  };
+  payloadChecksumSha256: string;
+  encryptedPayloadB64: string;
+}
+
+export interface PortableImportPreview {
+  fileName: string;
+  appVersion: string;
+  exportedAt: string;
+  sourceWorkspaceId: string;
+  modules: string[];
+  records: number;
+  checksumSha256: string;
+  documents: Record<string, unknown>;
+}
+
+export interface PortabilityTemplate {
+  id: string;
+  title: string;
+  description: string;
+  format: "csv" | "xlsx";
+  fileName: string;
 }

@@ -19,6 +19,7 @@ export const dataToolsContent = {
   views: {
     import: "Importar",
     export: "Exportar",
+    portability: "Portabilidade",
     rules: "Regras automáticas",
     history: "Histórico",
   } satisfies Record<DataToolsView, string>,
@@ -35,14 +36,14 @@ export const dataToolsContent = {
   import: {
     title: "Importar extrato ou planilha",
     description:
-      "Use arquivos CSV de planilhas ou OFX exportados pelo banco. Os dados são revisados antes de entrar na organização financeira.",
+      "Use arquivos CSV, OFX, XLSX ou XLS. Os dados são processados localmente, mapeados e revisados antes de entrar na organização financeira.",
     dropTitle: "Arraste o arquivo para esta área",
     dropHelper: "ou selecione um arquivo no computador",
     chooseFile: "Selecionar arquivo",
-    accepted: "Formatos aceitos: CSV e OFX",
-    privacy: "Nesta fase demonstrativa, o processamento acontece no navegador e não envia o arquivo para serviços externos.",
+    accepted: "Formatos aceitos: CSV, OFX, XLSX e XLS",
+    privacy: "O processamento acontece localmente no aplicativo e não envia o arquivo para serviços externos.",
     reading: "Lendo arquivo...",
-    invalidFile: "Não foi possível ler o arquivo. Verifique se ele está em CSV ou OFX.",
+    invalidFile: "Não foi possível ler o arquivo. Verifique se ele está em CSV, OFX, XLSX ou XLS.",
     emptyFile: "O arquivo não possui movimentações reconhecíveis.",
     mappingTitle: "Correspondência das colunas",
     mappingDescription: "Confirme o significado de cada coluna encontrada no CSV.",
@@ -111,11 +112,12 @@ export const dataToolsContent = {
     fileName: "Nome estimado do arquivo",
     csv: "CSV para planilhas",
     json: "JSON estruturado",
+    xlsx: "Excel com formatação",
     semicolon: "Ponto e vírgula (;)",
     comma: "Vírgula (,)",
     noPeriod: "O conjunto selecionado não possui filtro por data.",
     backupNote:
-      "O backup completo reúne os dados demonstrativos de todos os módulos em um único arquivo JSON.",
+      "A exportação completa reúne todos os módulos em JSON ou em uma pasta de trabalho Excel com múltiplas abas.",
     datasets: {
       transactions: "Lançamentos",
       accounts: "Contas e carteiras",
@@ -216,9 +218,13 @@ export const dataToolsContent = {
   sourceTypes: {
     csv: "CSV",
     ofx: "OFX",
+    xlsx: "Excel XLSX",
+    xls: "Excel XLS",
+    json: "JSON",
+    fuxportable: "Pacote portátil",
   } satisfies Record<ImportSourceType, string>,
   feedback: {
-    imported: "Movimentações importadas para esta sessão.",
+    imported: "Movimentações importadas com snapshot de segurança.",
     noSelection: "Selecione pelo menos uma movimentação válida.",
     exported: "Arquivo gerado com sucesso.",
     ruleCreated: "Regra automática criada.",

@@ -1,9 +1,9 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLCipher. A versão `0.6.0` reúne criptografia integral do
-banco local, Stronghold, Argon2id, PIN, backups criptografados, atualizações
-assinadas, integração nativa com o Windows e recursos de acessibilidade.
+React, TypeScript e SQLCipher. A versão `0.7.0` reúne criptografia integral do banco local, Stronghold,
+Argon2id, PIN, backups criptografados, atualizações assinadas, integração
+nativa com o Windows, acessibilidade e portabilidade protegida dos dados.
 
 Este projeto é separado do **FinnacialUX Core**. O Core continua sendo a versão
 web com NestJS, Prisma, PostgreSQL e Docker. O Desktop reaproveita a interface e
@@ -102,6 +102,7 @@ Leia também:
 - `FASE_4_DESKTOP_BANCO_SQLCIPHER.md`;
 - `FASE_5_DESKTOP_DISTRIBUICAO_ATUALIZACOES.md`;
 - `FASE_6_DESKTOP_EXPERIENCIA_ACESSIBILIDADE.md`;
+- `FASE_7_DESKTOP_PORTABILIDADE_DADOS.md`;
 - `docs/OPERACAO_BACKUP_RECUPERACAO.md`;
 - `docs/SEGURANCA_LOCAL.md`;
 - `docs/CRIPTOGRAFIA_BANCO_SQLCIPHER.md`;
@@ -135,3 +136,15 @@ Acesse **Configurações → Desktop**, **Configurações → Acessibilidade** o
 `F1` para abrir a nova área de ajuda. Para encerrar completamente quando
 “Fechar para a bandeja” estiver ativo, use o item **Encerrar FinnacialUX** no
 menu do ícone próximo ao relógio do Windows.
+
+
+## Fase 7 — importação e portabilidade
+
+A versão `0.7.0` permite importar CSV, OFX, XLSX e XLS, exportar os módulos em
+CSV, JSON ou Excel e transferir o espaço financeiro entre computadores usando
+um pacote `.fuxportable` protegido por senha.
+
+Acesse **Dados e automações → Portabilidade** para gerar modelos, exportar uma
+planilha completa, criar um pacote portátil ou desfazer uma importação pelo
+histórico local. O pacote portátil não contém PIN, senha, chave SQLCipher ou
+segredos do Stronghold.

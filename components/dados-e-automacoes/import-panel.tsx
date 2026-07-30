@@ -9,6 +9,8 @@ import {
 } from "@/components/shared/icons";
 import { dataToolsContent } from "@/content/dados-e-automacoes";
 import { parseCsvFile, parseOfxFile } from "@/lib/data-tools";
+import { chooseAndReadUserFile, decodeUtf8 } from "@/lib/desktop/file-transfer";
+import { parseSpreadsheetFile } from "@/lib/spreadsheet";
 import type {
   CsvField,
   CsvMapping,
@@ -24,6 +26,15 @@ const mappingOptions: Array<{ value: CsvField; label: string }> = [
   { value: "category", label: dataToolsContent.import.mappingCategory },
   { value: "account", label: dataToolsContent.import.mappingAccount },
 ];
+
+async function parseFinancialFile(name: string, bytes: Uint8Array): Promise<ImportParseResult> {
+  const extension = name.split(".").pop()?.toLocaleLowerCase("pt-BR");
+  if (extension === "xlsx" || extension === "xls") return parseSpreadsheetFile(bytes, name);
+  const text = decodeUtf8(bytes);
+  if (extension === "ofx") return parseOfxFile(text, name);
+  if (extension === "csv") return parseCsvFile(text, name);
+  throw new Error(dataToolsContent.import.invalidFile);
+}
 
 export function ImportPanel({
   parsed,
@@ -43,26 +54,31 @@ export function ImportPanel({
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
 
-  async function readFile(file: File) {
-    const extension = file.name.split(".").pop()?.toLocaleLowerCase("pt-BR");
-    if (extension !== "csv" && extension !== "ofx") {
-      setError(dataToolsContent.import.invalidFile);
-      return;
-    }
+  async function handleBytes(name: string, bytes: Uint8Array) {
     setReading(true);
     setError("");
     try {
-      const text = await file.text();
-      const result = extension === "ofx" ? parseOfxFile(text, file.name) : parseCsvFile(text, file.name);
+      const result = await parseFinancialFile(name, bytes);
       if (!result.records.length) {
         setError(dataToolsContent.import.emptyFile);
         return;
       }
       onParsed(result);
-    } catch {
-      setError(dataToolsContent.import.invalidFile);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : dataToolsContent.import.invalidFile);
     } finally {
       setReading(false);
+    }
+  }
+
+  async function chooseNativeFile() {
+    try {
+      const selected = await chooseAndReadUserFile([
+        { name: "Arquivos financeiros", extensions: ["csv", "ofx", "xlsx", "xls"] },
+      ], "Selecionar extrato ou planilha");
+      if (selected) await handleBytes(selected.name, selected.bytes);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : dataToolsContent.import.invalidFile);
     }
   }
 
@@ -88,25 +104,30 @@ export function ImportPanel({
             event.preventDefault();
             setDragging(false);
             const file = event.dataTransfer.files[0];
-            if (file) void readFile(file);
+            if (file) void file.arrayBuffer().then((buffer) => handleBytes(file.name, new Uint8Array(buffer)));
           }}
         >
           <span><FileIcon /></span>
           <strong>{dataToolsContent.import.dropTitle}</strong>
           <p>{dataToolsContent.import.dropHelper}</p>
-          <button className="secondary-action-button" type="button" onClick={() => inputRef.current?.click()} disabled={reading}>
-            <UploadIcon />
-            {reading ? dataToolsContent.import.reading : dataToolsContent.import.chooseFile}
-          </button>
+          <div className="file-drop-actions">
+            <button className="secondary-action-button" type="button" onClick={() => void chooseNativeFile()} disabled={reading}>
+              <UploadIcon />
+              {reading ? dataToolsContent.import.reading : dataToolsContent.import.chooseFile}
+            </button>
+            <button className="data-tools-link-button" type="button" onClick={() => inputRef.current?.click()} disabled={reading}>
+              Usar seletor do navegador
+            </button>
+          </div>
           <small>{dataToolsContent.import.accepted}</small>
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,.ofx,text/csv,application/x-ofx"
+            accept=".csv,.ofx,.xlsx,.xls,text/csv,application/x-ofx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             hidden
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               const file = event.target.files?.[0];
-              if (file) void readFile(file);
+              if (file) void file.arrayBuffer().then((buffer) => handleBytes(file.name, new Uint8Array(buffer)));
               event.currentTarget.value = "";
             }}
           />
@@ -117,7 +138,10 @@ export function ImportPanel({
           <div>
             <small>{dataToolsContent.import.sourceFile}</small>
             <strong>{parsed.fileName}</strong>
-            <p>{dataToolsContent.sourceTypes[parsed.sourceType]} · {parsed.records.length} {dataToolsContent.import.detectedRows}</p>
+            <p>
+              {dataToolsContent.sourceTypes[parsed.sourceType]} · {parsed.records.length} {dataToolsContent.import.detectedRows}
+              {parsed.selectedWorksheet ? ` · Aba: ${parsed.selectedWorksheet}` : ""}
+            </p>
           </div>
           <button type="button" onClick={onClear}>
             <TrashIcon />
@@ -126,9 +150,9 @@ export function ImportPanel({
         </div>
       )}
 
-      {error ? <p className="data-tools-error">{error}</p> : null}
+      {error ? <p className="data-tools-error" role="alert">{error}</p> : null}
 
-      {parsed?.sourceType === "csv" ? (
+      {parsed && parsed.sourceType !== "ofx" ? (
         <div className="column-mapping-section">
           <div className="data-tool-subheading">
             <div>

@@ -2,6 +2,7 @@ mod command_worker;
 mod encrypted_database;
 mod protection;
 mod security;
+mod portability;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -106,6 +107,7 @@ pub fn run() {
 
     let application = builder
         .plugin(log_plugin)
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             encrypted_database::encrypted_database_open,
@@ -144,6 +146,11 @@ pub fn run() {
             security::mark_vault_initialized,
             security::get_vault_bootstrap_secret,
             security::list_security_events,
+            portability::portability_get_workspace_documents,
+            portability::portability_apply_documents,
+            portability::portability_record_operation,
+            portability::portability_list_operations,
+            portability::portability_undo_operation,
         ])
         .setup(|app| {
             let local_data_dir = app

@@ -8,11 +8,12 @@ import { ExportPanel } from "@/components/dados-e-automacoes/export-panel";
 import { ImportHistory } from "@/components/dados-e-automacoes/import-history";
 import { ImportPanel } from "@/components/dados-e-automacoes/import-panel";
 import { ImportPreview } from "@/components/dados-e-automacoes/import-preview";
+import { PortabilityPanel } from "@/components/dados-e-automacoes/portability-panel";
 import { RuleDialog } from "@/components/dados-e-automacoes/rule-dialog";
 import { RulesPanel } from "@/components/dados-e-automacoes/rules-panel";
 import { CheckIcon } from "@/components/shared/icons";
 import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
-import { useFinanceDataState } from "@/components/providers/finance-data-provider";
+import { useFinanceDataState, useFinanceDataStatus } from "@/components/providers/finance-data-provider";
 import { dataToolsContent } from "@/content/dados-e-automacoes";
 import { initialAccounts } from "@/data/contas";
 import { transactionsData } from "@/data/lancamentos";
@@ -25,16 +26,25 @@ import { initialSubscriptions, initialSubscriptionCharges } from "@/data/assinat
 import { dataToolsReferenceDate, initialAutomationRules, initialImportHistory } from "@/data/dados-e-automacoes";
 import { initialCategories, initialMonthlyBudgets } from "@/data/orcamentos";
 import {
+  buildAllExportTables,
   buildExportTable,
   buildFullBackup,
   buildImportRows,
-  downloadTextFile,
   inferCsvMapping,
   parseCsvFile,
   reviewImportRow,
   tableToCsv,
+  tableToRecords,
   testAutomationRules,
 } from "@/lib/data-tools";
+import { chooseAndWriteUserFile, encodeUtf8 } from "@/lib/desktop/file-transfer";
+import {
+  applyPortabilityDocuments,
+  getWorkspaceDocuments,
+  recordPortabilityOperation,
+} from "@/lib/desktop/portability";
+import { sha256Hex } from "@/lib/portable-package";
+import { buildSpreadsheetFile } from "@/lib/spreadsheet";
 import type {
   AutomationRule,
   AutomationRuleInput,
@@ -51,13 +61,14 @@ import type { FinancialTransaction } from "@/types/lancamentos";
 
 export default function DadosEAutomacoesView() {
   const { confirmSensitiveAction } = useDesktopSecurity();
+  const { reload } = useFinanceDataStatus();
   const [view, setView] = useState<DataToolsView>("import");
   const [parsed, setParsed] = useState<ImportParseResult | null>(null);
   const [mapping, setMapping] = useState<CsvMapping>({});
   const [rows, setRows] = useState<ImportTransactionRow[]>([]);
   const [rules, setRules] = useFinanceDataState<AutomationRule[]>("automation-rules", initialAutomationRules);
-  const [history, setHistory] = useFinanceDataState<ImportHistoryItem[]>("import-history", initialImportHistory);
-  const [transactions, setTransactions] = useFinanceDataState<FinancialTransaction[]>("transactions", transactionsData);
+  const [history] = useFinanceDataState<ImportHistoryItem[]>("import-history", initialImportHistory);
+  const [transactions] = useFinanceDataState<FinancialTransaction[]>("transactions", transactionsData);
   const [cards] = useFinanceDataState("credit-cards", initialCreditCards);
   const [cardInvoices] = useFinanceDataState("card-invoices", initialCardInvoices);
   const [cardPurchases] = useFinanceDataState("card-purchases", initialCardPurchases);
@@ -70,10 +81,13 @@ export default function DadosEAutomacoesView() {
   const [subscriptions] = useFinanceDataState("subscriptions", initialSubscriptions);
   const [subscriptionCharges] = useFinanceDataState("subscription-charges", initialSubscriptionCharges);
   const [monthlyBudgets] = useFinanceDataState("monthly-budgets", initialMonthlyBudgets);
+  const [storedCategories] = useFinanceDataState("categories", initialCategories);
+  const [storedAccounts] = useFinanceDataState("accounts", initialAccounts);
   const [testResults, setTestResults] = useState<RuleTestResult[]>([]);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [operationBusy, setOperationBusy] = useState(false);
   const [exportConfiguration, setExportConfiguration] = useState<ExportConfiguration>({
     dataset: "transactions",
     format: "csv",
@@ -83,8 +97,6 @@ export default function DadosEAutomacoesView() {
     includeHeaders: true,
   });
 
-  const [storedCategories] = useFinanceDataState("categories", initialCategories);
-  const [storedAccounts] = useFinanceDataState("accounts", initialAccounts);
   const categories = useMemo(() => storedCategories.filter((item) => item.active).map((item) => item.name), [storedCategories]);
   const accounts = useMemo(() => storedAccounts.map((item) => item.name), [storedAccounts]);
   const financialData = useMemo(() => ({
@@ -115,7 +127,7 @@ export default function DadosEAutomacoesView() {
 
   function showFeedback(message: string) {
     setFeedback(message);
-    window.setTimeout(() => setFeedback(""), 2800);
+    window.setTimeout(() => setFeedback(""), 3200);
   }
 
   function updateRows(nextParsed: ImportParseResult, nextMapping: CsvMapping, nextRules = rules) {
@@ -152,60 +164,151 @@ export default function DadosEAutomacoesView() {
       : row));
   }
 
-  function importSelected() {
-    if (!parsed) return;
+  async function importSelected() {
+    if (!parsed || operationBusy) return;
     const selectedRows = rows.filter((row) => row.selected && row.status !== "duplicate");
     if (!selectedRows.length) {
       showFeedback(dataToolsContent.feedback.noSelection);
       return;
     }
-    const duplicateRows = rows.filter((row) => row.status === "duplicate").length;
-    const ignoredRows = rows.length - selectedRows.length - duplicateRows;
-    const importedAt = new Date().toISOString();
-    const importedTransactions: FinancialTransaction[] = selectedRows.map((row, index) => ({
-      id: `imported-${Date.now()}-${index}`,
-      description: row.description,
-      category: row.category,
-      account: row.account,
-      paymentMethod: "Importação",
-      date: row.date,
-      amount: row.amount,
-      type: row.type,
-      status: "completed",
-      note: `Importado de ${parsed.fileName}`,
-    }));
-    setTransactions((current) => [...importedTransactions, ...current]);
-
-    const nextHistory: ImportHistoryItem = {
-      id: `import-${Date.now()}`,
-      fileName: parsed.fileName,
-      sourceType: parsed.sourceType,
-      importedAt,
-      importedRows: selectedRows.length,
-      ignoredRows: Math.max(ignoredRows, 0),
-      duplicateRows,
-      status: ignoredRows || duplicateRows ? "partial" : "completed",
-    };
-    setHistory((current) => [nextHistory, ...current]);
-    clearImport();
-    showFeedback(dataToolsContent.feedback.imported);
+    setOperationBusy(true);
+    try {
+      const operationId = `port-${crypto.randomUUID()}`;
+      const duplicateRows = rows.filter((row) => row.status === "duplicate").length;
+      const ignoredRows = Math.max(rows.length - selectedRows.length - duplicateRows, 0);
+      const importedAt = new Date().toISOString();
+      const importedTransactions: FinancialTransaction[] = selectedRows.map((row, index) => ({
+        id: `imported-${crypto.randomUUID()}-${index}`,
+        description: row.description,
+        category: row.category,
+        account: row.account,
+        paymentMethod: "Importação",
+        date: row.date,
+        amount: row.amount,
+        type: row.type,
+        status: "completed",
+        note: `Importado de ${parsed.fileName}`,
+      }));
+      const nextHistory: ImportHistoryItem = {
+        id: `import-${crypto.randomUUID()}`,
+        operationId,
+        fileName: parsed.fileName,
+        sourceType: parsed.sourceType,
+        importedAt,
+        importedRows: selectedRows.length,
+        ignoredRows,
+        duplicateRows,
+        status: ignoredRows || duplicateRows ? "partial" : "completed",
+        reversible: true,
+      };
+      const documents = await getWorkspaceDocuments();
+      const currentTransactions = Array.isArray(documents.transactions)
+        ? documents.transactions as FinancialTransaction[]
+        : transactions;
+      const currentHistory = Array.isArray(documents["import-history"])
+        ? documents["import-history"] as ImportHistoryItem[]
+        : history;
+      const nextDocuments = {
+        ...documents,
+        transactions: [...importedTransactions, ...currentTransactions],
+        "import-history": [nextHistory, ...currentHistory],
+      };
+      await applyPortabilityDocuments({
+        documents: nextDocuments,
+        mode: "replace",
+        operation: {
+          id: operationId,
+          direction: "import",
+          format: parsed.sourceType,
+          dataset: "transactions",
+          fileName: parsed.fileName,
+          recordsTotal: rows.length,
+          recordsApplied: selectedRows.length,
+          recordsRejected: ignoredRows + duplicateRows,
+          affectedModules: ["transactions", "import-history"],
+          status: ignoredRows || duplicateRows ? "partial" : "completed",
+        },
+      });
+      await reload();
+      clearImport();
+      showFeedback(dataToolsContent.feedback.imported);
+    } catch (caught) {
+      showFeedback(caught instanceof Error ? caught.message : "Não foi possível concluir a importação.");
+    } finally {
+      setOperationBusy(false);
+    }
   }
 
   async function exportData(forceBackup = false) {
-    if (!(await confirmSensitiveAction("export"))) return;
-    const configuration = forceBackup ? { ...exportConfiguration, dataset: "full-backup" as const, format: "json" as const } : exportConfiguration;
-    if (configuration.dataset === "full-backup") {
-      downloadTextFile(JSON.stringify(buildFullBackup(financialData), null, 2), `backup-financeiro-${dataToolsReferenceDate}.json`, "application/json;charset=utf-8");
-    } else {
-      const table = buildExportTable(configuration.dataset, configuration.startDate, configuration.endDate, financialData);
-      if (configuration.format === "csv") {
-        downloadTextFile(tableToCsv(table, configuration.separator, configuration.includeHeaders), `${table.fileBase}-${dataToolsReferenceDate}.csv`, "text/csv;charset=utf-8");
+    if (operationBusy || !(await confirmSensitiveAction("export"))) return;
+    setOperationBusy(true);
+    try {
+      const configuration: ExportConfiguration = forceBackup
+        ? { ...exportConfiguration, dataset: "full-backup", format: "json" }
+        : exportConfiguration;
+      let bytes: Uint8Array;
+      let fileName: string;
+      let mimeType: string;
+      let recordsTotal = 0;
+      let affectedModules: string[] = [];
+      if (configuration.dataset === "full-backup") {
+        if (configuration.format === "xlsx") {
+          const tables = buildAllExportTables(configuration.startDate, configuration.endDate, financialData);
+          bytes = await buildSpreadsheetFile(tables.map((item) => ({ name: item.name, table: item.table })));
+          recordsTotal = tables.reduce((total, item) => total + item.table.rows.length, 0);
+          affectedModules = tables.map((item) => item.dataset);
+          fileName = `FinnacialUX-exportacao-completa-${dataToolsReferenceDate}.xlsx`;
+          mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        } else {
+          const backup = buildFullBackup(financialData);
+          bytes = encodeUtf8(`${JSON.stringify(backup, null, 2)}\n`);
+          recordsTotal = Object.values(backup).reduce((total, value) => total + (Array.isArray(value) ? value.length : 0), 0);
+          affectedModules = Object.keys(backup);
+          fileName = `backup-financeiro-${dataToolsReferenceDate}.json`;
+          mimeType = "application/json;charset=utf-8";
+        }
       } else {
-        const records = table.rows.map((row) => Object.fromEntries(table.headers.map((header, index) => [header, row[index] ?? ""])));
-        downloadTextFile(JSON.stringify(records, null, 2), `${table.fileBase}-${dataToolsReferenceDate}.json`, "application/json;charset=utf-8");
+        const table = buildExportTable(configuration.dataset, configuration.startDate, configuration.endDate, financialData);
+        recordsTotal = table.rows.length;
+        affectedModules = [configuration.dataset];
+        if (configuration.format === "csv") {
+          bytes = encodeUtf8(tableToCsv(table, configuration.separator, configuration.includeHeaders));
+          fileName = `${table.fileBase}-${dataToolsReferenceDate}.csv`;
+          mimeType = "text/csv;charset=utf-8";
+        } else if (configuration.format === "xlsx") {
+          bytes = await buildSpreadsheetFile([{ name: dataToolsContent.export.datasets[configuration.dataset], table }]);
+          fileName = `${table.fileBase}-${dataToolsReferenceDate}.xlsx`;
+          mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        } else {
+          bytes = encodeUtf8(`${JSON.stringify(tableToRecords(table), null, 2)}\n`);
+          fileName = `${table.fileBase}-${dataToolsReferenceDate}.json`;
+          mimeType = "application/json;charset=utf-8";
+        }
       }
+      const extension = fileName.split(".").at(-1) ?? configuration.format;
+      const destination = await chooseAndWriteUserFile({
+        bytes,
+        defaultFileName: fileName,
+        filters: [{ name: `Arquivo ${extension.toUpperCase()}`, extensions: [extension] }],
+        mimeType,
+      });
+      if (!destination) return;
+      await recordPortabilityOperation({
+        direction: "export",
+        format: extension,
+        dataset: configuration.dataset,
+        fileName,
+        checksumSha256: await sha256Hex(bytes),
+        recordsTotal,
+        recordsApplied: recordsTotal,
+        affectedModules,
+      });
+      showFeedback(dataToolsContent.feedback.exported);
+    } catch (caught) {
+      showFeedback(caught instanceof Error ? caught.message : "Não foi possível exportar os dados.");
+    } finally {
+      setOperationBusy(false);
     }
-    showFeedback(dataToolsContent.feedback.exported);
   }
 
   function openNewRule() {
@@ -280,12 +383,22 @@ export default function DadosEAutomacoesView() {
             onToggle={(id) => setRows((current) => current.map((row) => row.id === id ? { ...row, selected: !row.selected } : row))}
             onSelectAll={() => setRows((current) => current.map((row) => ({ ...row, selected: row.status !== "duplicate" })))}
             onClearSelection={() => setRows((current) => current.map((row) => ({ ...row, selected: false })))}
-            onImport={importSelected}
+            onImport={() => void importSelected()}
           />
         </div>
       ) : null}
 
       {view === "export" ? <ExportPanel configuration={exportConfiguration} preview={exportPreview} onChange={(patch) => setExportConfiguration((current) => ({ ...current, ...patch }))} onExport={() => void exportData()} /> : null}
+
+      {view === "portability" ? (
+        <PortabilityPanel
+          financialData={financialData}
+          startDate={exportConfiguration.startDate}
+          endDate={exportConfiguration.endDate}
+          onReload={reload}
+          onFeedback={showFeedback}
+        />
+      ) : null}
 
       {view === "rules" ? (
         <RulesPanel

@@ -21,7 +21,7 @@ export function ExportPanel({
   onExport: () => void;
 }) {
   const hasDates = configuration.dataset !== "accounts" && configuration.dataset !== "budgets" && configuration.dataset !== "full-backup";
-  const extension = configuration.dataset === "full-backup" ? "json" : configuration.format;
+  const extension = configuration.format;
   const fileName = `${preview?.fileBase ?? "backup-financeiro"}-${getReferenceDate()}.${extension}`;
 
   return (
@@ -46,19 +46,19 @@ export function ExportPanel({
           <label className="form-field">
             <span>{dataToolsContent.export.format}</span>
             <select
-              value={configuration.dataset === "full-backup" ? "json" : configuration.format}
-              disabled={configuration.dataset === "full-backup"}
+              value={configuration.format}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange({ format: event.target.value as ExportConfiguration["format"] })}
             >
               <option value="csv">{dataToolsContent.export.csv}</option>
               <option value="json">{dataToolsContent.export.json}</option>
+              <option value="xlsx">{dataToolsContent.export.xlsx}</option>
             </select>
           </label>
           <label className="form-field">
             <span>{dataToolsContent.export.separator}</span>
             <select
               value={configuration.separator}
-              disabled={configuration.format !== "csv" || configuration.dataset === "full-backup"}
+              disabled={configuration.format !== "csv"}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange({ separator: event.target.value as ExportConfiguration["separator"] })}
             >
               <option value=";">{dataToolsContent.export.semicolon}</option>
@@ -69,7 +69,7 @@ export function ExportPanel({
             <input
               type="checkbox"
               checked={configuration.includeHeaders}
-              disabled={configuration.format !== "csv" || configuration.dataset === "full-backup"}
+              disabled={configuration.format !== "csv"}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange({ includeHeaders: event.target.checked })}
             />
             <span>{dataToolsContent.export.includeHeaders}</span>
