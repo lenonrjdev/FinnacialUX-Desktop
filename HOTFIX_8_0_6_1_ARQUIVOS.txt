@@ -1,0 +1,3 @@
+eslint.config.mjs
+HOTFIX_8_0_6_1_ESLINT_VENDOR_COMMONJS.md
+HOTFIX_8_0_6_1_ARQUIVOS.txt
