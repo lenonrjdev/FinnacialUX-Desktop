@@ -12,6 +12,7 @@ export const reportsContent = {
   views: {
     reports: "Relatórios",
     projection: "Inteligência local",
+    planning: "Planejamento",
   },
   toolbar: {
     period: "Período analisado",
@@ -138,7 +139,7 @@ export const reportsContent = {
     exported: "Relatório exportado em CSV.",
   },
   accessibility: {
-    views: "Alternar entre relatórios e projeção",
+    views: "Alternar entre relatórios, inteligência e planejamento",
     summary: "Resumo financeiro do período",
     cashFlowChart: "Gráfico de entradas e saídas",
     projectionChart: "Gráfico da projeção de saldo",

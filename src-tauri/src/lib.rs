@@ -6,6 +6,7 @@ mod portability;
 mod continuity;
 mod automations;
 mod intelligence;
+mod planning;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -178,6 +179,18 @@ pub fn run() {
             intelligence::intelligence_delete_scenario,
             intelligence::intelligence_record_snapshot,
             intelligence::intelligence_list_snapshots,
+            planning::planning_get_preferences,
+            planning::planning_save_preferences,
+            planning::planning_list_plans,
+            planning::planning_save_plan,
+            planning::planning_activate_plan,
+            planning::planning_archive_plan,
+            planning::planning_record_review,
+            planning::planning_list_reviews,
+            planning::planning_list_decisions,
+            planning::planning_save_decision,
+            planning::planning_update_decision_status,
+            planning::planning_delete_decision,
         ])
         .setup(|app| {
             let local_data_dir = app

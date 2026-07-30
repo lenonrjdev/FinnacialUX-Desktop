@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 8;
+const CURRENT_SCHEMA_VERSION: i64 = 9;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -33,6 +33,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (6, "add_integrity_recovery_and_continuity_controls", include_str!("../migrations/0006_data_continuity.sql")),
     (7, "add_local_automation_engine", include_str!("../migrations/0007_local_automation_engine.sql")),
     (8, "add_local_financial_intelligence", include_str!("../migrations/0008_local_financial_intelligence.sql")),
+    (9, "add_decision_oriented_financial_planning", include_str!("../migrations/0009_decision_oriented_financial_planning.sql")),
 ];
 
 #[derive(Default)]
@@ -1262,7 +1263,7 @@ mod regression_tests {
     use sqlx::Connection;
 
     #[tokio::test]
-    async fn migrations_reach_schema_eight_and_are_idempotent() {
+    async fn migrations_reach_schema_nine_and_are_idempotent() {
         let mut connection = SqliteConnectOptions::new()
             .filename(":memory:")
             .create_if_missing(true)
@@ -1294,6 +1295,10 @@ mod regression_tests {
         assert!(table_exists(&mut connection, "financial_intelligence_preferences").await.unwrap());
         assert!(table_exists(&mut connection, "financial_intelligence_scenarios").await.unwrap());
         assert!(table_exists(&mut connection, "financial_intelligence_snapshots").await.unwrap());
+        assert!(table_exists(&mut connection, "financial_planning_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "financial_plans").await.unwrap());
+        assert!(table_exists(&mut connection, "financial_plan_reviews").await.unwrap());
+        assert!(table_exists(&mut connection, "financial_planning_decisions").await.unwrap());
     }
 
     #[test]

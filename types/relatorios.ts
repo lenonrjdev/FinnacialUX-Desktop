@@ -1,4 +1,4 @@
-export type ReportView = "reports" | "projection";
+export type ReportView = "reports" | "projection" | "planning";
 
 export type ReportPeriod =
   | "current-month"

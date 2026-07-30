@@ -7,6 +7,7 @@ import { CashFlowReport } from "@/components/relatorios/cash-flow-report";
 import { CategoryReport } from "@/components/relatorios/category-report";
 import { FinancialHealthPanel } from "@/components/relatorios/financial-health-panel";
 import { FinancialIntelligencePanel } from "@/components/relatorios/financial-intelligence-panel";
+import { FinancialPlanningPanel } from "@/components/relatorios/financial-planning-panel";
 import { ReportsHeading } from "@/components/relatorios/reports-heading";
 import { ReportsSummary } from "@/components/relatorios/reports-summary";
 import { ReportsToolbar } from "@/components/relatorios/reports-toolbar";
@@ -388,12 +389,14 @@ export default function RelatoriosView() {
             <AccountDistributionReport rows={accountRows} total={startingBalance} />
           </div>
         </>
-      ) : (
+      ) : view === "projection" ? (
         <FinancialIntelligencePanel
           scenario={scenario}
           onScenarioChange={setScenario}
           onProjectionChange={setIntelligenceProjection}
         />
+      ) : (
+        <FinancialPlanningPanel projection={intelligenceProjection} />
       )}
 
       {feedback ? (

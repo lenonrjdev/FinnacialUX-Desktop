@@ -24046,3 +24046,488 @@ html[data-theme="dark"] .intelligence-methodology-note {
   border-color: #37343d;
   background: #201e26;
 }
+
+/* Fase 12 — planejamento financeiro orientado por decisões */
+.financial-planning-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.planning-local-banner,
+.planning-action-bar,
+.planning-preferences-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--panel-background, #fff);
+  padding: 16px 18px;
+}
+
+.planning-local-banner > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+}
+
+.planning-local-banner div {
+  flex: 1;
+}
+
+.planning-local-banner strong,
+.planning-local-banner p {
+  display: block;
+  margin: 0;
+}
+
+.planning-local-banner p {
+  margin-top: 3px;
+  color: var(--muted-text, #6b7280);
+  font-size: 13px;
+}
+
+.planning-local-banner code {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted-text, #6b7280);
+}
+
+.planning-action-bar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.planning-plan-selector,
+.planning-main-actions,
+.planning-inline-controls,
+.planning-panel-header,
+.planning-field-grid,
+.planning-preferences-strip {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planning-plan-selector label,
+.planning-inline-controls label,
+.planning-field-grid label,
+.planning-preferences-strip label,
+.planning-panel-header > label,
+.planning-review-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.planning-plan-selector label span,
+.planning-inline-controls label span,
+.planning-field-grid label span,
+.planning-preferences-strip label span,
+.planning-panel-header > label span,
+.planning-review-notes span {
+  color: var(--muted-text, #6b7280);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planning-plan-selector select,
+.planning-inline-controls select,
+.planning-inline-controls input,
+.planning-field-grid input,
+.planning-field-grid select,
+.planning-preferences-strip input,
+.planning-preferences-strip select,
+.planning-panel-header > label input,
+.planning-review-notes textarea {
+  min-height: 40px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  background: var(--panel-background, #fff);
+  color: inherit;
+  padding: 8px 10px;
+}
+
+.planning-plan-selector select {
+  min-width: 260px;
+}
+
+.planning-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planning-summary-card {
+  min-height: 116px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--panel-background, #fff);
+  padding: 15px;
+}
+
+.planning-summary-card span,
+.planning-summary-card small {
+  color: var(--muted-text, #6b7280);
+  font-size: 12px;
+}
+
+.planning-summary-card strong {
+  font-size: 18px;
+}
+
+.planning-health-healthy { border-top: 3px solid #3f7d63; }
+.planning-health-attention { border-top: 3px solid #b7791f; }
+.planning-health-critical { border-top: 3px solid #b42318; }
+
+.planning-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.planning-tabs button {
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted-text, #6b7280);
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.planning-tabs button.active {
+  border-bottom-color: currentColor;
+  color: inherit;
+}
+
+.planning-editor-layout,
+.planning-review-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.planning-form-panel {
+  min-width: 0;
+}
+
+.planning-field-grid {
+  align-items: start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0 18px 18px;
+}
+
+.planning-field-grid label small {
+  color: var(--muted-text, #6b7280);
+  font-size: 11px;
+}
+
+.planning-allocation-list {
+  display: grid;
+  gap: 2px;
+  padding: 0 18px 18px;
+}
+
+.planning-allocation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--border-color, #eef0f3);
+  padding: 12px 0;
+}
+
+.planning-allocation-row > span {
+  display: grid;
+  gap: 4px;
+}
+
+.planning-allocation-row small {
+  color: var(--muted-text, #6b7280);
+}
+
+.planning-allocation-row > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.planning-allocation-row input[type="range"] {
+  flex: 1;
+}
+
+.planning-allocation-row output {
+  min-width: 46px;
+  text-align: right;
+  font-weight: 800;
+}
+
+.planning-allocation-attention { color: #9a6700; }
+.planning-allocation-critical { color: #b42318; }
+
+.planning-panel-header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.planning-panel-header > label {
+  grid-template-columns: auto 80px auto;
+  align-items: center;
+}
+
+.planning-table-wrap {
+  overflow-x: auto;
+  padding: 0 18px 18px;
+}
+
+.planning-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.planning-table th,
+.planning-table td {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding: 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.planning-table td:first-child {
+  white-space: normal;
+}
+
+.planning-table td:first-child strong,
+.planning-table td:first-child small {
+  display: block;
+}
+
+.planning-table td:first-child small {
+  margin-top: 3px;
+  color: var(--muted-text, #6b7280);
+  max-width: 360px;
+}
+
+.planning-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.planning-status-healthy { background: #e8f5ee; color: #286749; }
+.planning-status-attention { background: #fff6df; color: #8b5e00; }
+.planning-status-critical { background: #feeceb; color: #a1271d; }
+
+.planning-card-list,
+.planning-deviation-list,
+.planning-recommendation-list,
+.planning-decision-list {
+  display: grid;
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.planning-strategy-card,
+.planning-deviation-row,
+.planning-recommendation,
+.planning-decision {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  padding: 14px;
+}
+
+.planning-strategy-card { grid-template-columns: auto minmax(220px, 1fr) minmax(360px, auto); }
+.planning-strategy-card p,
+.planning-deviation-row small,
+.planning-recommendation p,
+.planning-recommendation small,
+.planning-decision p,
+.planning-decision small {
+  margin: 3px 0 0;
+  color: var(--muted-text, #6b7280);
+  font-size: 12px;
+}
+
+.planning-position,
+.planning-goal-priority,
+.planning-decision-icon {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 9px;
+  background: var(--soft-background, #f3f4f6);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.planning-strategy-card dl,
+.planning-deviation-row dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.planning-strategy-card dl div,
+.planning-deviation-row dl div {
+  display: grid;
+  gap: 3px;
+}
+
+.planning-strategy-card dt,
+.planning-deviation-row dt {
+  color: var(--muted-text, #6b7280);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.planning-strategy-card dd,
+.planning-deviation-row dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.planning-card-healthy { border-left: 3px solid #3f7d63; }
+.planning-card-attention { border-left: 3px solid #b7791f; }
+.planning-card-critical { border-left: 3px solid #b42318; }
+
+.planning-deviation-row {
+  grid-template-columns: auto minmax(160px, 1fr) auto;
+  cursor: pointer;
+}
+
+.planning-deviation-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.planning-recommendation > span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.planning-priority-high > span { background: #feeceb; color: #a1271d; }
+.planning-priority-medium > span { background: #fff6df; color: #8b5e00; }
+.planning-priority-low > span { background: #eef2f6; color: #475467; }
+
+.planning-review-notes {
+  padding: 0 18px 14px;
+}
+
+.planning-review-notes textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.planning-review-layout .primary-action-button,
+.planning-help-text {
+  margin: 0 18px 18px;
+}
+
+.planning-decision {
+  grid-template-columns: auto minmax(180px, 1fr) auto auto;
+}
+
+.planning-decision-completed { opacity: .68; }
+.planning-decision-dismissed { opacity: .5; }
+
+.planning-decision-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.planning-decision-actions button {
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.planning-message {
+  border: 1px solid var(--border-color, #e5e7eb);
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.planning-error { border-color: #efb6b2; background: #fff3f2; color: #8f2018; }
+.planning-warning { border-color: #eed49b; background: #fff9e9; color: #795300; }
+.planning-success { border-color: #abd9c3; background: #effaf4; color: #245b42; }
+
+.planning-preferences-strip {
+  align-items: center;
+}
+
+.planning-preferences-strip > span {
+  margin-left: auto;
+  color: var(--muted-text, #6b7280);
+  font-size: 12px;
+}
+
+.planning-empty-state {
+  margin: 0;
+  padding: 18px;
+  color: var(--muted-text, #6b7280);
+}
+
+.planning-toolbar-note {
+  justify-content: center;
+}
+
+@media (max-width: 1280px) {
+  .planning-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .planning-strategy-card { grid-template-columns: auto minmax(200px, 1fr); }
+  .planning-strategy-card dl { grid-column: 2; }
+}
+
+@media (max-width: 860px) {
+  .planning-summary-grid,
+  .planning-editor-layout,
+  .planning-review-layout,
+  .planning-field-grid { grid-template-columns: 1fr; }
+  .planning-local-banner,
+  .planning-action-bar { align-items: flex-start; }
+  .planning-local-banner code { display: none; }
+  .planning-allocation-row,
+  .planning-strategy-card,
+  .planning-deviation-row,
+  .planning-recommendation,
+  .planning-decision { grid-template-columns: 1fr; align-items: start; }
+  .planning-allocation-row > div { min-width: 0; width: 100%; }
+  .planning-strategy-card dl,
+  .planning-deviation-row dl { grid-column: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planning-preferences-strip > span { margin-left: 0; width: 100%; }
+}
+
+@media print {
+  .planning-action-bar,
+  .planning-tabs,
+  .planning-preferences-strip,
+  .planning-main-actions,
+  .planning-decision-actions { display: none !important; }
+}

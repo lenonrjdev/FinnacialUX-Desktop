@@ -196,3 +196,17 @@ e simuladores que não alteram os dados reais.
 ```
 
 Consulte também `docs/INTELIGENCIA_FINANCEIRA_LOCAL.md`.
+
+## Fase 12 — planejamento financeiro orientado por decisões
+
+A versão `0.12.0` transforma as projeções em planos mensais ou anuais com
+envelopes de renda, limites dinâmicos, estratégias de dívidas, priorização de
+metas, revisão mensal e calendário de decisões. Ativar um plano não cria
+lançamentos nem executa pagamentos automaticamente.
+
+```powershell
+.\13_APLICAR_FASE_12.cmd
+.\13_VALIDAR_FASE_12.cmd
+```
+
+Consulte também `docs/PLANEJAMENTO_FINANCEIRO_DECISOES.md`.
