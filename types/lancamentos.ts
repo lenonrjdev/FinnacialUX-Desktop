@@ -10,6 +10,7 @@ export type FinancialTransaction = {
   category: string;
   account: string;
   destinationAccount?: string;
+  destinationAccountId?: string;
   paymentMethod: string;
   date: string;
   amount: number;
@@ -18,6 +19,11 @@ export type FinancialTransaction = {
   note?: string;
   sourceType?: string;
   sourceId?: string;
+  accountId?: string;
+  reconciliationImportId?: string;
+  reconciliationEntryId?: string;
+  reconciliationStatus?: "matched" | "created";
+  reconciledAt?: string;
 };
 
 export type NewTransactionInput = Omit<FinancialTransaction, "id">;

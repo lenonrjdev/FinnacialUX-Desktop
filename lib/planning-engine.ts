@@ -8,7 +8,6 @@ import type {
   PlanningAllocationKey,
   PlanningAllocationRow,
   PlanningCategoryLimit,
-  PlanningDecision,
   PlanningHealth,
   PlanningMonthlyPoint,
   PlanningRecommendation,

@@ -7,6 +7,7 @@ mod continuity;
 mod automations;
 mod intelligence;
 mod planning;
+mod reconciliation;
 
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
@@ -191,6 +192,21 @@ pub fn run() {
             planning::planning_save_decision,
             planning::planning_update_decision_status,
             planning::planning_delete_decision,
+            reconciliation::reconciliation_get_preferences,
+            reconciliation::reconciliation_save_preferences,
+            reconciliation::reconciliation_preview_import,
+            reconciliation::reconciliation_apply_import,
+            reconciliation::reconciliation_list_imports,
+            reconciliation::reconciliation_undo_import,
+            reconciliation::reconciliation_preview_closure,
+            reconciliation::reconciliation_close_month,
+            reconciliation::reconciliation_list_closures,
+            reconciliation::reconciliation_reopen_month,
+            reconciliation::reconciliation_list_events,
+            reconciliation::reconciliation_save_evidence,
+            reconciliation::reconciliation_list_evidence,
+            reconciliation::reconciliation_read_evidence,
+            reconciliation::reconciliation_delete_evidence,
         ])
         .setup(|app| {
             let local_data_dir = app

@@ -11,6 +11,7 @@ export type NavigationIconName =
   | "debt"
   | "subscription"
   | "reports"
+  | "reconciliation"
   | "data-tools"
   | "access"
   | "settings"

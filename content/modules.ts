@@ -39,6 +39,10 @@ export const moduleContent = {
     title: "Assinaturas",
     description: "Centralize serviços recorrentes e custos mensais ou anuais.",
   },
+  conciliacao: {
+    title: "Conciliação",
+    description: "Compare extratos, resolva divergências e feche períodos com segurança.",
+  },
   relatorios: {
     title: "Relatórios",
     description: "Analise receitas, despesas, categorias e evolução do saldo.",

@@ -1,4 +1,4 @@
-import { DebtIcon, PlusIcon, ReceiptIcon } from "@/components/shared/icons";
+import { PlusIcon, ReceiptIcon } from "@/components/shared/icons";
 import { debtsContent } from "@/content/dividas";
 
 export function DebtsHeading({

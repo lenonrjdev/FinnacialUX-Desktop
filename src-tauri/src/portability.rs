@@ -1,4 +1,8 @@
-use crate::{command_worker::run_local_async_worker, encrypted_database::{connect_app_database, EncryptedDatabaseState}};
+use crate::{
+    command_worker::run_local_async_worker,
+    encrypted_database::{connect_app_database, EncryptedDatabaseState},
+    reconciliation::ensure_transaction_document_change_allowed,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -188,6 +192,22 @@ async fn apply_documents_internal(
     ensure_database_writable(&state)?;
     let mut connection = connect_app_database(app, &state).await?;
     let snapshot = read_documents(&mut connection, &request.workspace_id).await?;
+    if let Some(next_transactions) = request.documents.get("transactions") {
+        ensure_transaction_document_change_allowed(
+            &mut connection,
+            &request.workspace_id,
+            next_transactions,
+        )
+        .await?;
+    } else if request.mode == "replace" {
+        let empty_transactions = Value::Array(Vec::new());
+        ensure_transaction_document_change_allowed(
+            &mut connection,
+            &request.workspace_id,
+            &empty_transactions,
+        )
+        .await?;
+    }
     let modules = request.documents.keys().cloned().collect::<Vec<_>>();
     let records = count_records(&request.documents);
     let operation = normalize_operation(
@@ -354,6 +374,16 @@ async fn undo_operation_internal(
     let snapshot = serde_json::from_str::<Map<String, Value>>(
         snapshot_json.as_deref().ok_or_else(|| "Snapshot de recuperação ausente.".to_string())?,
     ).map_err(|error| error.to_string())?;
+    let next_transactions = snapshot
+        .get("transactions")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(Vec::new()));
+    ensure_transaction_document_change_allowed(
+        &mut connection,
+        &workspace_id,
+        &next_transactions,
+    )
+    .await?;
     let now = Utc::now().to_rfc3339();
     let mut transaction = connection.begin().await.map_err(|error| error.to_string())?;
     sqlx::query("DELETE FROM finance_documents WHERE workspace_id = $1")

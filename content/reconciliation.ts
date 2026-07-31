@@ -1,0 +1,35 @@
+export const reconciliationContent = {
+  badge: "Conciliação local e criptografada",
+  title: "Conciliação e fechamento financeiro",
+  description: "Compare extratos com seus lançamentos, resolva divergências e feche cada mês com histórico auditável.",
+  tabs: {
+    reconcile: "Conciliação",
+    closing: "Fechamento",
+    history: "Histórico",
+    evidence: "Comprovantes",
+  },
+  actions: {
+    chooseStatement: "Selecionar extrato",
+    preview: "Gerar prévia",
+    apply: "Aplicar conciliação",
+    closeMonth: "Fechar mês",
+    reopenMonth: "Reabrir mês",
+    undoImport: "Desfazer importação",
+    addEvidence: "Adicionar comprovante",
+    savePreferences: "Salvar preferências",
+  },
+  empty: {
+    preview: "Selecione um arquivo CSV ou OFX para iniciar a conciliação.",
+    imports: "Nenhum extrato conciliado neste espaço.",
+    closures: "Nenhum mês fechado ainda.",
+    evidence: "Nenhum comprovante foi vinculado.",
+  },
+  feedback: {
+    applied: "Conciliação aplicada e lançamentos atualizados.",
+    closed: "Mês fechado. Alterações nesse período estão bloqueadas.",
+    reopened: "Mês reaberto com registro de auditoria.",
+    undone: "Importação desfeita e snapshot anterior restaurado.",
+    evidenceSaved: "Comprovante protegido no banco SQLCipher.",
+    preferencesSaved: "Preferências de conciliação atualizadas.",
+  },
+} as const;

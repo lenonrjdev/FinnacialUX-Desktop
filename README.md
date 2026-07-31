@@ -210,3 +210,16 @@ lançamentos nem executa pagamentos automaticamente.
 ```
 
 Consulte também `docs/PLANEJAMENTO_FINANCEIRO_DECISOES.md`.
+
+## Fase 13 — conciliação e fechamento financeiro
+
+A versão `0.13.0` adiciona importação conciliável de CSV e OFX, correspondências
+explicáveis, snapshot reversível, fechamento mensal, bloqueio de períodos,
+reabertura auditada e comprovantes armazenados no SQLCipher.
+
+```powershell
+.\14_APLICAR_FASE_13.cmd
+.\14_VALIDAR_FASE_13.cmd
+```
+
+Consulte também `docs/CONCILIACAO_FECHAMENTO_FINANCEIRO.md`.

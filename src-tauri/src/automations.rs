@@ -1,10 +1,11 @@
 use crate::{
     command_worker::run_local_async_worker,
     encrypted_database::{connect_app_database, EncryptedDatabaseState},
+    reconciliation::ensure_transaction_document_change_allowed,
 };
 use chrono::{Duration, Months, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{Connection, Row};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -965,6 +966,15 @@ pub fn automation_apply(
                 documents.get(module).cloned().unwrap_or(Value::Null),
             );
         }
+        if let Some(next_transactions) = next_documents.get("transactions") {
+            ensure_transaction_document_change_allowed(
+                &mut connection,
+                &request.workspace_id,
+                next_transactions,
+            )
+            .await?;
+        }
+
         let after_checksum = selected_documents_checksum(&next_documents, &affected_modules)?;
         let now = Utc::now().to_rfc3339();
         let run = AutomationRun {
@@ -1093,6 +1103,18 @@ pub fn automation_undo_run(
             connection.close().await.map_err(to_error)?;
             return Err("Os módulos foram alterados depois desta automação. O desfazer foi bloqueado para não sobrescrever mudanças posteriores.".to_string());
         }
+        if current_run.affected_modules.iter().any(|module| module == "transactions") {
+            let next_transactions = before_snapshot
+                .get("transactions")
+                .cloned()
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            ensure_transaction_document_change_allowed(
+                &mut connection,
+                &workspace_id,
+                &next_transactions,
+            )
+            .await?;
+        }
 
         let now = Utc::now().to_rfc3339();
         let mut transaction = connection.begin().await.map_err(to_error)?;
@@ -1170,6 +1192,7 @@ pub fn automation_mark_alert(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn default_preferences() -> AutomationPreferences {
         AutomationPreferences {

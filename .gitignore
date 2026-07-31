@@ -23,3 +23,6 @@ test-results/
 blob-report/
 coverage/
 *.lcov
+# Backups locais dos aplicadores de fases
+.phase-backup/
+*.tsbuildinfo

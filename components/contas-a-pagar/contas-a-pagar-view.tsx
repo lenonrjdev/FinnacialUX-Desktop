@@ -44,7 +44,6 @@ export default function ContasAPagarView() {
     referenceDate,
     accounts,
     accountNames,
-    payables,
     setPayables,
     unifiedPayables,
     recordCommitmentPayment,

@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestão financeira offline com SQLCipher, automações reversíveis, inteligência local e planejamento orientado por decisões.",
+  "description": "FinnacialUX Desktop — gestão financeira offline com SQLCipher, automações reversíveis, inteligência local, planejamento e conciliação auditável.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

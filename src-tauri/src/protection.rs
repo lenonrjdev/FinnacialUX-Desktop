@@ -28,7 +28,7 @@ const BACKUP_EXTENSION: &str = "fuxbackup";
 const DIAGNOSTIC_EXTENSION: &str = "fuxdiag";
 const BACKUP_MAGIC_V2: &[u8] = b"FUXBACKUP2\n";
 const BACKUP_MAGIC_V3: &[u8] = b"FUXBACKUP3\n";
-const CURRENT_SCHEMA_VERSION: i64 = 9;
+const CURRENT_SCHEMA_VERSION: i64 = 10;
 const SESSION_MARKER_FILE: &str = "session-active.marker";
 
 #[derive(Default)]

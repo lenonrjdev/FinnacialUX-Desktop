@@ -1,4 +1,4 @@
-import { CreditCardIcon, PlusIcon, ShoppingBagIcon } from "@/components/shared/icons";
+import { PlusIcon, ShoppingBagIcon } from "@/components/shared/icons";
 import { cardsContent } from "@/content/cartoes";
 
 export function CardsHeading({

@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 9;
+const CURRENT_SCHEMA_VERSION: i64 = 10;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -34,6 +34,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (7, "add_local_automation_engine", include_str!("../migrations/0007_local_automation_engine.sql")),
     (8, "add_local_financial_intelligence", include_str!("../migrations/0008_local_financial_intelligence.sql")),
     (9, "add_decision_oriented_financial_planning", include_str!("../migrations/0009_decision_oriented_financial_planning.sql")),
+    (10, "add_bank_reconciliation_and_monthly_closing", include_str!("../migrations/0010_bank_reconciliation_and_monthly_closing.sql")),
 ];
 
 #[derive(Default)]
@@ -213,18 +214,6 @@ pub async fn connect_app_database(
         .connect()
         .await
         .map_err(|error| format!("Não foi possível abrir o banco criptografado: {error}"))
-}
-
-pub async fn connect_encrypted_path(
-    path: &Path,
-    state: &EncryptedDatabaseState,
-    create: bool,
-) -> Result<SqliteConnection, String> {
-    let key = state.key_copy()?;
-    encrypted_options(path, &key, create)
-        .connect()
-        .await
-        .map_err(to_error)
 }
 
 pub async fn connect_plaintext_path(path: &Path, create: bool) -> Result<SqliteConnection, String> {
@@ -916,6 +905,7 @@ pub async fn encrypted_database_execute(
         return Err(access.reason.unwrap_or_else(|| "O banco está em modo somente leitura e bloqueia gravações financeiras para proteger a integridade dos dados.".to_string()));
     }
     let mut connection = connect_app_database(&app, &state).await?;
+    crate::reconciliation::guard_finance_document_sql_write(&mut connection, &sql, &values).await?;
     let result = bind_json(sqlx::query(&sql), values)
         .execute(&mut connection)
         .await

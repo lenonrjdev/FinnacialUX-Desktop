@@ -25,6 +25,7 @@ export const dashboardNavigation: NavigationGroup[] = [
   {
     label: "Análises",
     items: [
+      { label: "Conciliação", href: "/conciliacao", icon: "reconciliation" },
       { label: "Relatórios", href: "/relatorios", icon: "reports" },
       { label: "Dados e automações", href: "/dados-e-automacoes", icon: "data-tools" },
     ],

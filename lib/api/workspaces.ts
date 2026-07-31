@@ -1,6 +1,5 @@
 import { desktopWorkspaces } from "@/lib/desktop/workspaces";
 import type {
-  AccessInvitation,
   CreateWorkspaceInput,
   InviteMemberInput,
   WorkspaceRole,
