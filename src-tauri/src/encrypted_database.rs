@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 13;
+const CURRENT_SCHEMA_VERSION: i64 = 14;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -38,6 +38,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (11, "add_large_volume_performance_and_native_pagination", include_str!("../migrations/0011_large_volume_performance.sql")),
     (12, "add_local_background_tasks_and_native_notifications", include_str!("../migrations/0012_local_background_tasks_and_notifications.sql")),
     (13, "add_local_diagnostics_auditing_and_support", include_str!("../migrations/0013_local_diagnostics_and_support.sql")),
+    (14, "add_guided_onboarding_and_contextual_help", include_str!("../migrations/0014_guided_onboarding_and_contextual_help.sql")),
 ];
 
 #[derive(Default)]
@@ -1256,7 +1257,7 @@ mod regression_tests {
     use sqlx::Connection;
 
     #[tokio::test]
-    async fn migrations_reach_schema_thirteen_and_are_idempotent() {
+    async fn migrations_reach_schema_fourteen_and_are_idempotent() {
         let mut connection = SqliteConnectOptions::new()
             .filename(":memory:")
             .create_if_missing(true)
@@ -1308,6 +1309,92 @@ mod regression_tests {
         assert!(table_exists(&mut connection, "diagnostic_repairs").await.unwrap());
         assert!(table_exists(&mut connection, "support_package_exports").await.unwrap());
         assert!(table_exists(&mut connection, "diagnostic_probe").await.unwrap());
+        assert!(table_exists(&mut connection, "onboarding_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "onboarding_steps").await.unwrap());
+        assert!(table_exists(&mut connection, "onboarding_events").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn every_historical_schema_upgrades_to_fourteen_without_losing_core_data() {
+        for starting_schema in [1_i64, 4, 7, 10, 13, 14] {
+            let mut connection = SqliteConnectOptions::new()
+                .filename(":memory:")
+                .create_if_missing(true)
+                .foreign_keys(true)
+                .connect()
+                .await
+                .expect("abre banco de atualização");
+
+            sqlx::raw_sql(
+                "CREATE TABLE IF NOT EXISTS fux_schema_migrations (version INTEGER PRIMARY KEY, description TEXT NOT NULL, applied_at TEXT NOT NULL);",
+            )
+            .execute(&mut connection)
+            .await
+            .expect("cria histórico");
+
+            for (version, description, sql) in MIGRATIONS.iter().filter(|(version, _, _)| *version <= starting_schema) {
+                sqlx::raw_sql(sql)
+                    .execute(&mut connection)
+                    .await
+                    .unwrap_or_else(|error| panic!("migration {version} do fixture falhou: {error}"));
+                sqlx::query(
+                    "INSERT OR IGNORE INTO fux_schema_migrations (version, description, applied_at) VALUES ($1, $2, $3)",
+                )
+                .bind(version)
+                .bind(description)
+                .bind(Utc::now().to_rfc3339())
+                .execute(&mut connection)
+                .await
+                .expect("registra migration do fixture");
+            }
+            sqlx::raw_sql(&format!("PRAGMA user_version = {starting_schema};"))
+                .execute(&mut connection)
+                .await
+                .expect("marca schema inicial");
+
+            sqlx::query(
+                "INSERT OR IGNORE INTO users (id, name, email, password_hash, password_salt, created_at, updated_at) VALUES ('rc-user', 'RC', 'rc@local.invalid', 'fixture', 'fixture-salt', $1, $1)",
+            )
+            .bind(Utc::now().to_rfc3339())
+            .execute(&mut connection)
+            .await
+            .expect("preserva usuário de referência");
+            sqlx::query(
+                "INSERT INTO workspaces (id, owner_user_id, name, description, kind, created_at, last_activity_at) VALUES ('rc-workspace', 'rc-user', 'RC', '', 'personal', $1, $1)",
+            )
+            .bind(Utc::now().to_rfc3339())
+            .execute(&mut connection)
+            .await
+            .expect("preserva espaço de referência");
+            sqlx::query(
+                "INSERT INTO finance_documents (workspace_id, module, data_json, updated_at) VALUES ('rc-workspace', 'rc-sentinel', '{\"preserved\":true}', $1)",
+            )
+            .bind(Utc::now().to_rfc3339())
+            .execute(&mut connection)
+            .await
+            .expect("preserva documento de referência");
+
+            let final_schema = apply_migrations(&mut connection).await.expect("atualiza fixture");
+            let user_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE id = 'rc-user'")
+                .fetch_one(&mut connection)
+                .await
+                .expect("lê usuário após atualização");
+            let document_json = sqlx::query_scalar::<_, String>(
+                "SELECT data_json FROM finance_documents WHERE workspace_id = 'rc-workspace' AND module = 'rc-sentinel'",
+            )
+            .fetch_one(&mut connection)
+            .await
+            .expect("lê documento após atualização");
+            let migration_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM fux_schema_migrations")
+                .fetch_one(&mut connection)
+                .await
+                .expect("lê histórico final");
+
+            assert_eq!(final_schema, CURRENT_SCHEMA_VERSION);
+            assert_eq!(user_count, 1, "dados centrais foram perdidos ao atualizar o schema {starting_schema}");
+            assert_eq!(document_json, "{\"preserved\":true}");
+            assert_eq!(migration_count, CURRENT_SCHEMA_VERSION);
+        }
     }
 
     #[test]

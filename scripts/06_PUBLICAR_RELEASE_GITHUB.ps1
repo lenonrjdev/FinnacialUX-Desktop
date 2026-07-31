@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$Version = "",
   [string]$Repository = ""
 )
@@ -84,6 +84,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 }
 
 $Repository = Resolve-Repository -ExplicitRepository $Repository
+$IsPrerelease = $Version -match "-rc\.\d+$"
 $ReleaseDir = Join-Path $Root "releases\$Version"
 if (-not (Test-Path $ReleaseDir)) {
   throw "Release local nao encontrada em: $ReleaseDir. Finalize-a primeiro com .\05B_FINALIZAR_RELEASE_EXISTENTE.cmd"
@@ -97,11 +98,20 @@ $RequiredFiles = @(
   "release-manifest.json",
   "RELEASE_NOTES.md"
 )
+if ($IsPrerelease) {
+  $RequiredFiles += @("RC_BUILD_MANIFEST.json", "DEPENDENCY_INVENTORY.json", "RC_VALIDATION_REPORT.json")
+}
 
 foreach ($file in $RequiredFiles) {
   $path = Join-Path $ReleaseDir $file
   if (-not (Test-Path $path)) {
     throw "Arquivo obrigatorio ausente na release: $path"
+  }
+}
+if ($IsPrerelease) {
+  $validation = Get-Content (Join-Path $ReleaseDir "RC_VALIDATION_REPORT.json") -Raw | ConvertFrom-Json
+  if ($validation.manualMatrixComplete -ne $true) {
+    throw "A matriz manual da Release Candidate ainda nao foi concluida."
   }
 }
 
@@ -157,18 +167,26 @@ if ($ReleaseExists) {
     throw "Falha ao atualizar os arquivos da release $Tag."
   }
 
-  & $Gh release edit $Tag --latest --title "FinnacialUX Desktop $Version" --notes-file $Notes --repo $Repository
+  $EditArguments = @("release", "edit", $Tag, "--title", "FinnacialUX Desktop $Version", "--notes-file", $Notes, "--repo", $Repository)
+  if ($IsPrerelease) { $EditArguments += @("--prerelease", "--draft=false") } else { $EditArguments += "--latest" }
+  & $Gh @EditArguments
   if ($LASTEXITCODE -ne 0) {
     throw "Os arquivos foram enviados, mas nao foi possivel atualizar os dados da release $Tag."
   }
 } else {
   Write-Host "A release ainda nao existe. Criando $Tag..." -ForegroundColor Green
-  & $Gh release create $Tag @Assets `
-    --repo $Repository `
-    --title "FinnacialUX Desktop $Version" `
-    --notes-file $Notes `
-    --target main `
-    --latest
+  $CreateArguments = @("release", "create", $Tag) + $Assets + @(
+    "--repo", $Repository,
+    "--title", "FinnacialUX Desktop $Version",
+    "--notes-file", $Notes,
+    "--target", "main"
+  )
+  if ($IsPrerelease) {
+    $CreateArguments += @("--prerelease", "--latest=false")
+  } else {
+    $CreateArguments += "--latest"
+  }
+  & $Gh @CreateArguments
 
   if ($LASTEXITCODE -ne 0) {
     throw "A criacao da release $Tag falhou."

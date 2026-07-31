@@ -271,3 +271,32 @@ Nenhuma senha, chave, saldo, descrição ou documento financeiro é exportado.
 
 Consulte também `docs/DIAGNOSTICO_AUDITORIA_SUPORTE.md`.
 
+
+## Fase 17 — onboarding e experiência final
+
+A versão `0.17.0` adiciona primeiros passos persistentes por espaço, busca global
+com relevância e histórico local, ajuda contextual por tela, painel de progresso
+e preferências dedicadas. Nenhum dado financeiro de demonstração é criado e o
+guia respeita integralmente o modo somente leitura.
+
+```powershell
+.\18_APLICAR_FASE_17.cmd
+.\18_VALIDAR_FASE_17.cmd
+```
+
+Use `F1` para ajuda da tela atual, `Shift + F1` para o manual completo e
+`Ctrl + K` para pesquisar páginas, ações, configurações e ajuda. Consulte também
+`docs/ONBOARDING_EXPERIENCIA_FINAL.md`.
+
+## Fase 18 — Release Candidate
+
+A versão candidata `0.18.0-rc.1` congela o schema SQLCipher em 14 e prepara instalação, atualização, assinatura, checksums, inventário e homologação para a versão 1.0.
+
+Comandos principais:
+
+```powershell
+.\19_APLICAR_FASE_18.cmd
+.\19_VALIDAR_FASE_18.cmd
+.\19_GERAR_RELEASE_CANDIDATE.cmd
+```
+

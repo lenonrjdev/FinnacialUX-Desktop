@@ -31,8 +31,18 @@ jobs:
         shell: powershell
         run: |
           $version = (Get-Content .\package.json -Raw | ConvertFrom-Json).version
+          $isPrerelease = $version -match "-rc\.\d+$"
+          $prerelease = $isPrerelease.ToString().ToLowerInvariant()
+          $makeLatest = (-not $isPrerelease).ToString().ToLowerInvariant()
           "FINNACIALUX_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "FINNACIALUX_NOTES=releases/$version/RELEASE_NOTES.md" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "FINNACIALUX_PRERELEASE=$prerelease" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "FINNACIALUX_MAKE_LATEST=$makeLatest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "FINNACIALUX_DRAFT=$prerelease" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Preparar manifestos da Release Candidate
+        if: env.FINNACIALUX_PRERELEASE == 'true'
+        shell: powershell
+        run: node scripts/release-candidate.mjs prepare .
       - name: Gerar release assinada
         shell: powershell
         env:
@@ -40,9 +50,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: .\scripts\05_GERAR_RELEASE.ps1 -Ci
+      - name: Validar artefatos da Release Candidate
+        if: env.FINNACIALUX_PRERELEASE == 'true'
+        shell: powershell
+        run: node scripts/release-candidate.mjs verify-artifacts . "releases\$env:FINNACIALUX_VERSION"
       - name: Publicar arquivos da release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: releases/${{ env.FINNACIALUX_VERSION }}/*
           body_path: ${{ env.FINNACIALUX_NOTES }}
-          make_latest: true
+          draft: ${{ env.FINNACIALUX_DRAFT }}
+          prerelease: ${{ env.FINNACIALUX_PRERELEASE }}
+          make_latest: ${{ env.FINNACIALUX_MAKE_LATEST }}
+          fail_on_unmatched_files: true

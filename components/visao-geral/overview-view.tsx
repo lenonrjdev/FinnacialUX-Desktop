@@ -2,6 +2,7 @@
 
 import { CashFlowCard } from "@/components/visao-geral/cash-flow-card";
 import { FinancialLists } from "@/components/visao-geral/financial-lists";
+import { FirstStepsPanel } from "@/components/visao-geral/first-steps-panel";
 import { MonthlyInsight } from "@/components/visao-geral/monthly-insight";
 import { MonthlyPanel } from "@/components/visao-geral/monthly-panel";
 import { OverviewHeading } from "@/components/visao-geral/overview-heading";
@@ -14,6 +15,7 @@ export default function OverviewView() {
   return (
     <div className="overview-page">
       <OverviewHeading data={data} />
+      <FirstStepsPanel />
       <SummaryCards data={data} />
 
       <section className="overview-main-grid">

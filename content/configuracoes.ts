@@ -19,6 +19,7 @@ export const settingsContent = {
     background: "Rotinas locais",
     desktop: "Desktop",
     accessibility: "Acessibilidade",
+    onboarding: "Primeiros passos",
     updates: "Atualizações",
   },
   summary: {

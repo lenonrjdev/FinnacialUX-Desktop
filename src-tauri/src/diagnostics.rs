@@ -20,7 +20,7 @@ use tauri::{AppHandle, Manager};
 use tempfile::TempDir;
 use uuid::Uuid;
 
-const CURRENT_SCHEMA_VERSION: i64 = 13;
+const CURRENT_SCHEMA_VERSION: i64 = 14;
 const SUPPORT_EXTENSION: &str = "fuxsupport";
 const MIN_FREE_DISK_BYTES: u64 = 100 * 1024 * 1024;
 const HEALTHY_FREE_DISK_BYTES: u64 = 500 * 1024 * 1024;

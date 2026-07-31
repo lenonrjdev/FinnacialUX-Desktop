@@ -275,9 +275,13 @@ async function main() {
     console.log(`  SHA-256: ${hash}`);
 
     stage('Gerando manifesto tecnico');
+    const prerelease = version.includes('-');
     const manifest = {
       product: 'FinnacialUX Desktop',
       version,
+      channel: prerelease ? 'release-candidate' : 'stable',
+      prerelease,
+      schemaVersion: 14,
       tag,
       repository,
       installer: assetName,

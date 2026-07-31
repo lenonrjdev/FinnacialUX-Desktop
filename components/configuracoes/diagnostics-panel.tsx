@@ -232,7 +232,7 @@ export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string)
         </div>
 
         <div className="diagnostic-capability-grid">
-          <article className={categoryPassed("database.encryption") ? "healthy" : "attention"}><DatabaseIcon /><div><small>SQLCipher</small><strong>{categoryPassed("database.encryption") ? "Confirmado" : "Revisar"}</strong><span>schema 13 e integridade</span></div></article>
+          <article className={categoryPassed("database.encryption") ? "healthy" : "attention"}><DatabaseIcon /><div><small>SQLCipher</small><strong>{categoryPassed("database.encryption") ? "Confirmado" : "Revisar"}</strong><span>schema 14 e integridade</span></div></article>
           <article className={categoryPassed("security.stronghold") ? "healthy" : "attention"}><KeyIcon /><div><small>Stronghold</small><strong>{categoryPassed("security.stronghold") ? "Disponível" : "Parcial"}</strong><span>segredos nunca exportados</span></div></article>
           <article className={categoryPassed("continuity.restore_drill") ? "healthy" : "neutral"}><ArchiveIcon /><div><small>Restauração</small><strong>{categoryPassed("continuity.restore_drill") ? "Ensaio aprovado" : "Ainda não ensaiada"}</strong><span>snapshot temporário</span></div></article>
           <article className={categoryPassed("updates.channel") ? "healthy" : "attention"}><ShieldIcon /><div><small>Atualizações</small><strong>{categoryPassed("updates.channel") ? "Configuradas" : "Revisar canal"}</strong><span>assinatura e endpoint</span></div></article>

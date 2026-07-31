@@ -1,0 +1,79 @@
+{
+  "formatVersion": 1,
+  "schemaVersion": 14,
+  "frozen": true,
+  "frozenFor": "1.0.0",
+  "migrationCount": 14,
+  "migrations": [
+    {
+      "version": 1,
+      "file": "0001_initial.sql",
+      "sha256": "358a843336cb2027f5cd200ba64b8b568baf6bf6d9e73669e63857f9a541f643"
+    },
+    {
+      "version": 2,
+      "file": "0002_data_protection.sql",
+      "sha256": "32db5ff53528fd90a347c695f7a0f52e0200765a73a7dd7aa5c8ebdc8d53ea53"
+    },
+    {
+      "version": 3,
+      "file": "0003_local_security.sql",
+      "sha256": "c5a94ef6776a1ce0885e82ca59b067939837127324ee1fbe44b9449c809f7f10"
+    },
+    {
+      "version": 4,
+      "file": "0004_database_encryption.sql",
+      "sha256": "a622a0a796b2fe81648b41a6601d30b1111375e677a7531e8a6145ca923cc02e"
+    },
+    {
+      "version": 5,
+      "file": "0005_data_portability.sql",
+      "sha256": "6795ed62e50c5616d629c49bce86c5040b2df2209411aa5ab9fe7d72eb8d1a45"
+    },
+    {
+      "version": 6,
+      "file": "0006_data_continuity.sql",
+      "sha256": "7ff549174a6081fa3035789a09d1c63ae9e311259fd757d7a740f85a331cab5a"
+    },
+    {
+      "version": 7,
+      "file": "0007_local_automation_engine.sql",
+      "sha256": "956f1f90385ac85226f6e6c353ca524762434edd2cd93188c5f8471701ff2291"
+    },
+    {
+      "version": 8,
+      "file": "0008_local_financial_intelligence.sql",
+      "sha256": "a53bbe9e5fd9ae6f510124c1ec56cda04eea17f2dbf8da6834963a52515d66b9"
+    },
+    {
+      "version": 9,
+      "file": "0009_decision_oriented_financial_planning.sql",
+      "sha256": "e036b6615de96c35d2334358815a23521557d05667829d7c5907bc1e1359a5b0"
+    },
+    {
+      "version": 10,
+      "file": "0010_bank_reconciliation_and_monthly_closing.sql",
+      "sha256": "eb358276c8dc1e9e393ad563ec7783afe78ce0191bbe738b558030aeecaa2020"
+    },
+    {
+      "version": 11,
+      "file": "0011_large_volume_performance.sql",
+      "sha256": "7fd2463ea10fc31b7411f79a09a99dc846230d81574bfbcdc39212b7a9d1294d"
+    },
+    {
+      "version": 12,
+      "file": "0012_local_background_tasks_and_notifications.sql",
+      "sha256": "418b569e73c82a8a6a1a53c1abc70c8aa4bd14979f7151d304e93e873f67d465"
+    },
+    {
+      "version": 13,
+      "file": "0013_local_diagnostics_and_support.sql",
+      "sha256": "7602b3153e3ab721cde37506dd6288820fb1959b0df8bd62b2e6adadc4871d82"
+    },
+    {
+      "version": 14,
+      "file": "0014_guided_onboarding_and_contextual_help.sql",
+      "sha256": "3828c1f7daaa2e090cb0f24500fc7af5d309cd4403f6ee601899f36a628e5526"
+    }
+  ]
+}

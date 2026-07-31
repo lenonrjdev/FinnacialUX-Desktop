@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { scoreCommandSearch } from "@/lib/onboarding-engine";
 import {
   ArchiveIcon,
   BookIcon,
@@ -19,6 +20,7 @@ export type DesktopCommand = {
   description: string;
   keywords: string[];
   shortcut?: string;
+  category?: "Navegação" | "Ações" | "Configurações" | "Ajuda";
   icon: "search" | "transaction" | "backup" | "lock" | "settings" | "data" | "help" | "database";
   run: () => void | Promise<void>;
 };
@@ -69,14 +71,22 @@ export function DesktopCommandPalette({
   }, [initialQuery, open]);
 
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("pt-BR");
-    if (!normalized) return commands;
-    return commands.filter((command) => (
-      [command.label, command.description, ...command.keywords]
-        .join(" ")
-        .toLocaleLowerCase("pt-BR")
-        .includes(normalized)
-    ));
+    let recent: string[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        recent = JSON.parse(window.localStorage.getItem("finnacialux-command-history-v1") || "[]");
+      } catch {
+        recent = [];
+      }
+    }
+    return commands
+      .map((command) => ({
+        command,
+        score: scoreCommandSearch(query, command, recent.indexOf(command.id)),
+      }))
+      .filter((entry) => entry.score >= 0)
+      .sort((left, right) => right.score - left.score || left.command.label.localeCompare(right.command.label, "pt-BR"))
+      .map((entry) => entry.command);
   }, [commands, query]);
 
   useEffect(() => {
@@ -87,6 +97,13 @@ export function DesktopCommandPalette({
 
   async function execute(command: DesktopCommand | undefined) {
     if (!command) return;
+    try {
+      const current = JSON.parse(window.localStorage.getItem("finnacialux-command-history-v1") || "[]") as string[];
+      const next = [command.id, ...current.filter((id) => id !== command.id)].slice(0, 12);
+      window.localStorage.setItem("finnacialux-command-history-v1", JSON.stringify(next));
+    } catch {
+      // O histórico é apenas uma preferência local opcional.
+    }
     onClose();
     await command.run();
   }
@@ -140,7 +157,7 @@ export function DesktopCommandPalette({
             ref={inputRef}
             value={query}
             onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
-            placeholder={mode === "search" ? "Buscar páginas, módulos e configurações..." : "Buscar páginas, ações e configurações..."}
+            placeholder={mode === "search" ? "Buscar páginas, módulos, ações e ajuda..." : "Buscar páginas, ações, configurações e ajuda..."}
             autoComplete="off"
           />
           <button type="button" onClick={onClose} aria-label="Fechar central de comandos"><CloseIcon /></button>
@@ -160,7 +177,7 @@ export function DesktopCommandPalette({
                 onClick={() => void execute(command)}
               >
                 <span className="desktop-command-icon"><Icon /></span>
-                <span className="desktop-command-copy"><strong>{command.label}</strong><small>{command.description}</small></span>
+                <span className="desktop-command-copy"><strong>{command.label}</strong><small>{command.description}</small>{command.category ? <em>{command.category}</em> : null}</span>
                 {command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
               </button>
             );

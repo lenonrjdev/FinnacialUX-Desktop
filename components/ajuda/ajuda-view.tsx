@@ -23,6 +23,7 @@ import { hasTauriRuntime } from "@/lib/desktop/runtime";
 
 const categoryIcons = {
   "primeiros-passos": BookIcon,
+  experiencia: SearchIcon,
   seguranca: ShieldIcon,
   backups: ArchiveIcon,
   atualizacoes: RefreshIcon,
@@ -31,7 +32,7 @@ const categoryIcons = {
 export default function AjudaView() {
   const { openCommandPalette, notify } = useDesktopExperience();
   const [query, setQuery] = useState("");
-  const [version, setVersion] = useState("0.6.0");
+  const [version, setVersion] = useState("0.18.0-rc.1");
   const [supportSummary, setSupportSummary] = useState("");
   const [loadingSupport, setLoadingSupport] = useState(false);
 

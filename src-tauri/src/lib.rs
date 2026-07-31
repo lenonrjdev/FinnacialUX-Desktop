@@ -11,6 +11,7 @@ mod reconciliation;
 mod performance;
 mod background_tasks;
 mod diagnostics;
+mod onboarding;
 
 use background_tasks::BackgroundSchedulerState;
 use encrypted_database::EncryptedDatabaseState;
@@ -248,6 +249,12 @@ pub fn run() {
             diagnostics::diagnostics_apply_repair,
             diagnostics::diagnostics_export_support_package,
             diagnostics::diagnostics_validate_support_package,
+            onboarding::onboarding_get_state,
+            onboarding::onboarding_sync_progress,
+            onboarding::onboarding_complete_step,
+            onboarding::onboarding_skip_guide,
+            onboarding::onboarding_reset_guide,
+            onboarding::onboarding_save_preferences,
         ])
         .setup(|app| {
             let local_data_dir = app

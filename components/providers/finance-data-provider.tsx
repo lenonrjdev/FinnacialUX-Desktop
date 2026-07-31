@@ -211,6 +211,15 @@ export function useFinanceDataState<T>(
   return [value, setValue];
 }
 
+
+export function useFinanceDocumentsSnapshot() {
+  const context = useContext(FinanceDataContext);
+  if (!context) {
+    throw new Error("useFinanceDocumentsSnapshot deve ser usado dentro de FinanceDataProvider.");
+  }
+  return context.documents;
+}
+
 export function useFinanceDataStatus() {
   const context = useContext(FinanceDataContext);
   if (!context) {

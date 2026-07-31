@@ -1,0 +1,33 @@
+{
+  "formatVersion": 1,
+  "product": "FinnacialUX Desktop",
+  "version": "0.18.0-rc.1",
+  "channel": "release-candidate",
+  "schemaVersion": 14,
+  "schemaFrozen": true,
+  "target": "windows-x86_64-nsis",
+  "tag": "desktop-v0.18.0-rc.1",
+  "prerelease": true,
+  "makeLatest": false,
+  "requiredArtifacts": [
+    "FinnacialUX-Desktop_0.18.0-rc.1_x64-setup.exe",
+    "FinnacialUX-Desktop_0.18.0-rc.1_x64-setup.exe.sig",
+    "latest.json",
+    "SHA256SUMS.txt",
+    "release-manifest.json",
+    "RELEASE_NOTES.md",
+    "RC_BUILD_MANIFEST.json",
+    "DEPENDENCY_INVENTORY.json",
+    "RC_VALIDATION_REPORT.json"
+  ],
+  "manualMatrix": [
+    "windows-10-clean-install",
+    "windows-11-clean-install",
+    "upgrade-from-0.17.0",
+    "upgrade-preserves-sqlcipher-data",
+    "uninstall-keeps-user-choice-explicit",
+    "recovery-after-interrupted-update",
+    "native-notifications-and-tray",
+    "updater-signature-validation"
+  ]
+}

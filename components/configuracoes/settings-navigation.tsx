@@ -26,6 +26,7 @@ const navigation: Array<{ key: SettingsView; icon: React.ReactNode }> = [
   { key: "background", icon: <BellIcon /> },
   { key: "desktop", icon: <MonitorIcon /> },
   { key: "accessibility", icon: <EyeIcon /> },
+  { key: "onboarding", icon: <ShieldIcon /> },
   { key: "updates", icon: <RefreshIcon /> },
 ];
 

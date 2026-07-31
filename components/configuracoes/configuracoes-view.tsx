@@ -10,10 +10,12 @@ import { ContinuityPanel } from "@/components/configuracoes/continuity-panel";
 import { DesktopExperiencePanel } from "@/components/configuracoes/desktop-experience-panel";
 import { AccessibilityPanel } from "@/components/configuracoes/accessibility-panel";
 import { NotificationsPanel } from "@/components/configuracoes/notifications-panel";
+import { OnboardingSettingsPanel } from "@/components/configuracoes/onboarding-settings-panel";
 import { PreferencesPanel } from "@/components/configuracoes/preferences-panel";
 import { ProfileSettingsPanel } from "@/components/configuracoes/profile-settings-panel";
 import { SecurityPanel } from "@/components/configuracoes/security-panel";
 import { UpdatesPanel } from "@/components/configuracoes/updates-panel";
+import { ReleaseCandidatePanel } from "@/components/configuracoes/release-candidate-panel";
 import { SettingsHeading } from "@/components/configuracoes/settings-heading";
 import { SettingsNavigation } from "@/components/configuracoes/settings-navigation";
 import { SettingsSummary } from "@/components/configuracoes/settings-summary";
@@ -177,6 +179,7 @@ export default function ConfiguracoesView() {
       background: "rotinas",
       desktop: "desktop",
       accessibility: "acessibilidade",
+      onboarding: "primeiros-passos",
       updates: "atualizacoes",
     };
     const hash = hashes[next];
@@ -189,6 +192,7 @@ export default function ConfiguracoesView() {
       if (hash === "#atualizacoes") setView("updates");
       else if (hash === "#desktop") setView("desktop");
       else if (hash === "#acessibilidade") setView("accessibility");
+      else if (hash === "#primeiros-passos") setView("onboarding");
       else if (hash === "#continuidade") setView("continuity");
       else if (hash === "#diagnostico") setView("diagnostics");
       else if (hash === "#desempenho") setView("performance");
@@ -535,7 +539,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility", "onboarding"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -596,12 +600,16 @@ export default function ConfiguracoesView() {
       {view === "background" ? <BackgroundTasksPanel onFeedback={showFeedback} /> : null}
       {view === "desktop" ? <DesktopExperiencePanel /> : null}
       {view === "accessibility" ? <AccessibilityPanel /> : null}
+      {view === "onboarding" ? <OnboardingSettingsPanel /> : null}
       {view === "updates" ? (
-        <UpdatesPanel
-          onConfirmInstall={() => desktopSecurity.confirmSensitiveAction("security")}
-          getBackupCredential={desktopSecurity.getDeviceBackupKey}
-          onFeedback={showFeedback}
-        />
+        <>
+          <UpdatesPanel
+            onConfirmInstall={() => desktopSecurity.confirmSensitiveAction("security")}
+            getBackupCredential={desktopSecurity.getDeviceBackupKey}
+            onFeedback={showFeedback}
+          />
+          <ReleaseCandidatePanel onFeedback={showFeedback} />
+        </>
       ) : null}
 
       {feedback ? <div className="transaction-feedback settings-feedback" role="status"><CheckIcon /> {feedback}</div> : null}

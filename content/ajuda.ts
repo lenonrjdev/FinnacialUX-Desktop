@@ -16,6 +16,16 @@ export const helpContent = {
       ],
     },
     {
+      id: "experiencia",
+      title: "Guia, busca e ajuda contextual",
+      description: "Encontre o próximo passo e localize qualquer módulo sem decorar o menu.",
+      items: [
+        ["Primeiros passos persistentes", "O progresso é salvo por espaço financeiro e pode ser retomado ou reiniciado em Configurações."],
+        ["Busca global", "Use Ctrl + K ou Ctrl + F para pesquisar páginas, ações, configurações e tópicos de ajuda."],
+        ["Ajuda desta tela", "Pressione F1 para abrir orientações relacionadas à página atual sem perder seu trabalho."],
+      ],
+    },
+    {
       id: "seguranca",
       title: "Segurança local",
       description: "Entenda como senha, PIN, Stronghold e SQLCipher protegem este computador.",
@@ -55,7 +65,8 @@ export const helpContent = {
     ["Ctrl + L", "Bloquear o aplicativo"],
     ["Ctrl + ,", "Abrir configurações desktop"],
     ["Ctrl + Shift + E", "Abrir exportação de dados"],
-    ["F1", "Abrir esta central de ajuda"],
+    ["F1", "Abrir ajuda da tela atual"],
+    ["Shift + F1", "Abrir a central completa de ajuda"],
     ["Esc", "Fechar diálogo, menu ou central de comandos"],
   ],
 } as const;

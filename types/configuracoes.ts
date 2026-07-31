@@ -11,6 +11,7 @@ export type SettingsView =
   | "background"
   | "desktop"
   | "accessibility"
+  | "onboarding"
   | "updates";
 
 export type AppearanceMode = "light" | "dark" | "system";
