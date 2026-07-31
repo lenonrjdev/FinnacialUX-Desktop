@@ -3,11 +3,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { DesktopCommandPalette, type DesktopCommand } from "@/components/desktop/desktop-command-palette";
+import { ContextualHelpPanel } from "@/components/ajuda/contextual-help-panel";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import { CheckIcon, CloseIcon, WarningIcon } from "@/components/shared/icons";
+import { contextualHelpTopics } from "@/content/onboarding";
+import { dashboardNavigation } from "@/content/dashboard";
+import { findContextualHelp } from "@/lib/onboarding-engine";
 import {
   applyDesktopExperiencePreferences,
   defaultDesktopExperiencePreferences,
@@ -37,6 +41,7 @@ type DesktopExperienceContextValue = {
   performanceLoading: boolean;
   refreshPerformance: () => Promise<void>;
   openCommandPalette: (mode?: PaletteMode) => void;
+  openContextHelp: () => void;
   createQuickBackup: () => Promise<void>;
   notify: (notice: DesktopExperienceNotice) => void;
 };
@@ -52,12 +57,14 @@ function isEditableTarget(target: EventTarget | null) {
 
 export function DesktopExperienceProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const desktopSecurity = useDesktopSecurity();
   const [preferences, setPreferences] = useState(defaultDesktopExperiencePreferences);
   const preferencesRef = useRef(preferences);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands");
+  const [contextHelpOpen, setContextHelpOpen] = useState(false);
   const [notice, setNotice] = useState<DesktopExperienceNotice | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [performance, setPerformance] = useState<DesktopPerformanceSnapshot | null>(null);
@@ -140,6 +147,16 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
     setPaletteOpen(true);
   }, []);
 
+  const openContextHelp = useCallback(() => {
+    const enabled = typeof window === "undefined"
+      || window.localStorage.getItem("finnacialux-contextual-help-enabled") !== "false";
+    if (!enabled) {
+      notify({ kind: "info", message: "A ajuda contextual está desativada. Reative em Configurações → Primeiros passos." });
+      return;
+    }
+    setContextHelpOpen(true);
+  }, [notify]);
+
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       const control = event.ctrlKey || event.metaKey;
@@ -175,12 +192,13 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
         window.dispatchEvent(new CustomEvent("finnacialux-save-request"));
       } else if (event.key === "F1") {
         event.preventDefault();
-        router.push("/ajuda");
+        if (event.shiftKey) router.push("/ajuda");
+        else openContextHelp();
       }
     };
     window.addEventListener("keydown", handleShortcut, true);
     return () => window.removeEventListener("keydown", handleShortcut, true);
-  }, [createQuickBackup, desktopSecurity, openCommandPalette, router]);
+  }, [createQuickBackup, desktopSecurity, openCommandPalette, openContextHelp, router]);
 
   useEffect(() => {
     if (!hasTauriRuntime()) return;
@@ -225,95 +243,152 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
     };
   }, [createQuickBackup, desktopSecurity]);
 
-  const commands = useMemo<DesktopCommand[]>(() => [
-    {
-      id: "search",
-      label: "Buscar no FinnacialUX",
-      description: "Localize páginas e ações pela central de comandos.",
-      keywords: ["buscar", "pesquisar", "localizar"],
-      shortcut: "Ctrl F",
-      icon: "search",
-      run: () => openCommandPalette("search"),
-    },
-    {
-      id: "new-transaction",
-      label: "Novo lançamento",
-      description: "Registre uma nova entrada ou saída.",
-      keywords: ["receita", "despesa", "transação", "lançamento"],
-      shortcut: "Ctrl N",
-      icon: "transaction",
-      run: () => router.push("/lancamentos#novo-lancamento"),
-    },
-    {
-      id: "backup",
-      label: backupBusy ? "Criando backup..." : "Criar backup agora",
-      description: "Gere uma cópia criptografada em um local escolhido.",
-      keywords: ["backup", "cópia", "segurança"],
-      shortcut: "Ctrl B",
-      icon: "backup",
-      run: createQuickBackup,
-    },
-    {
-      id: "lock",
-      label: "Bloquear FinnacialUX",
-      description: "Proteja imediatamente o banco e a interface.",
-      keywords: ["bloquear", "pin", "segurança"],
-      shortcut: "Ctrl L",
-      icon: "lock",
-      run: () => desktopSecurity.lock("central de comandos"),
-    },
-    {
-      id: "settings",
-      label: "Abrir configurações desktop",
-      description: "Janela, inicialização, notificações e desempenho.",
-      keywords: ["configurações", "desktop", "windows"],
-      shortcut: "Ctrl ,",
-      icon: "settings",
-      run: () => router.push("/configuracoes#desktop"),
-    },
-    {
-      id: "background-tasks",
-      label: "Rotinas locais",
-      description: "Fila, notificações, tentativas e execução em segundo plano.",
-      keywords: ["rotinas", "agendador", "notificações", "fila"],
-      icon: "settings",
-      run: () => router.push("/configuracoes#rotinas"),
-    },
-    {
-      id: "accessibility",
-      label: "Acessibilidade",
-      description: "Contraste, movimento, texto e foco do teclado.",
-      keywords: ["acessibilidade", "contraste", "fonte", "movimento"],
-      icon: "settings",
-      run: () => router.push("/configuracoes#acessibilidade"),
-    },
-    {
-      id: "diagnostics",
-      label: "Diagnóstico do aplicativo",
-      description: "Integridade, SQLCipher, armazenamento e logs.",
-      keywords: ["diagnóstico", "banco", "sqlcipher", "logs"],
-      icon: "database",
-      run: () => router.push("/configuracoes#diagnostico"),
-    },
-    {
-      id: "export",
-      label: "Exportar dados",
-      description: "Abra a área de dados e portabilidade.",
-      keywords: ["exportar", "dados", "json", "csv"],
-      shortcut: "Ctrl Shift E",
-      icon: "data",
-      run: () => router.push("/dados-e-automacoes#exportar"),
-    },
-    {
-      id: "help",
-      label: "Ajuda e atalhos",
-      description: "Primeiros passos, segurança e suporte interno.",
-      keywords: ["ajuda", "atalhos", "suporte", "manual"],
-      shortcut: "F1",
-      icon: "help",
-      run: () => router.push("/ajuda"),
-    },
-  ], [backupBusy, createQuickBackup, desktopSecurity, openCommandPalette, router]);
+  const commands = useMemo<DesktopCommand[]>(() => {
+    const navigationCommands: DesktopCommand[] = dashboardNavigation
+      .flatMap((group) => group.items.map((item) => ({
+        id: `navigate:${item.href}`,
+        label: item.label,
+        description: `Abrir ${item.label.toLocaleLowerCase("pt-BR")} no FinnacialUX.`,
+        keywords: [group.label, item.label, item.href.replaceAll("/", " ").replaceAll("-", " ")],
+        category: "Navegação" as const,
+        icon: item.href === "/ajuda" ? "help" as const : item.href === "/configuracoes" ? "settings" as const : "search" as const,
+        run: () => router.push(item.href),
+      })));
+    const helpCommands: DesktopCommand[] = contextualHelpTopics.map((topic) => ({
+      id: `help:${topic.id}`,
+      label: topic.title,
+      description: topic.summary,
+      keywords: [...topic.steps, ...topic.related.map((item) => item.label)],
+      category: "Ajuda" as const,
+      icon: "help" as const,
+      run: () => {
+        router.push(topic.path);
+        window.setTimeout(openContextHelp, 80);
+      },
+    }));
+    return [
+      {
+        id: "search",
+        label: "Buscar no FinnacialUX",
+        description: "Localize páginas, ações, configurações e ajuda.",
+        keywords: ["buscar", "pesquisar", "localizar", "global"],
+        shortcut: "Ctrl F",
+        category: "Ações",
+        icon: "search",
+        run: () => openCommandPalette("search"),
+      },
+      {
+        id: "onboarding",
+        label: "Continuar primeiros passos",
+        description: "Retome o guia de configuração do espaço financeiro.",
+        keywords: ["onboarding", "começar", "guia", "configuração"],
+        category: "Ajuda",
+        icon: "help",
+        run: () => {
+          window.dispatchEvent(new CustomEvent("finnacialux-onboarding-open-request"));
+        },
+      },
+      {
+        id: "context-help",
+        label: "Ajuda desta tela",
+        description: "Veja orientações relacionadas à página atual.",
+        keywords: ["contexto", "como usar", "manual", "f1"],
+        shortcut: "F1",
+        category: "Ajuda",
+        icon: "help",
+        run: openContextHelp,
+      },
+      {
+        id: "new-transaction",
+        label: "Novo lançamento",
+        description: "Registre uma nova entrada ou saída.",
+        keywords: ["receita", "despesa", "transação", "lançamento"],
+        shortcut: "Ctrl N",
+        category: "Ações",
+        icon: "transaction",
+        run: () => router.push("/lancamentos#novo-lancamento"),
+      },
+      {
+        id: "backup",
+        label: backupBusy ? "Criando backup..." : "Criar backup agora",
+        description: "Gere uma cópia criptografada em um local escolhido.",
+        keywords: ["backup", "cópia", "segurança"],
+        shortcut: "Ctrl B",
+        category: "Ações",
+        icon: "backup",
+        run: createQuickBackup,
+      },
+      {
+        id: "lock",
+        label: "Bloquear FinnacialUX",
+        description: "Proteja imediatamente o banco e a interface.",
+        keywords: ["bloquear", "pin", "segurança"],
+        shortcut: "Ctrl L",
+        category: "Ações",
+        icon: "lock",
+        run: () => desktopSecurity.lock("central de comandos"),
+      },
+      {
+        id: "settings",
+        label: "Abrir configurações desktop",
+        description: "Janela, inicialização, notificações e desempenho.",
+        keywords: ["configurações", "desktop", "windows"],
+        shortcut: "Ctrl ,",
+        category: "Configurações",
+        icon: "settings",
+        run: () => router.push("/configuracoes#desktop"),
+      },
+      {
+        id: "background-tasks",
+        label: "Rotinas locais",
+        description: "Fila, notificações, tentativas e execução em segundo plano.",
+        keywords: ["rotinas", "agendador", "notificações", "fila"],
+        category: "Configurações",
+        icon: "settings",
+        run: () => router.push("/configuracoes#rotinas"),
+      },
+      {
+        id: "accessibility",
+        label: "Acessibilidade",
+        description: "Contraste, movimento, texto e foco do teclado.",
+        keywords: ["acessibilidade", "contraste", "fonte", "movimento"],
+        category: "Configurações",
+        icon: "settings",
+        run: () => router.push("/configuracoes#acessibilidade"),
+      },
+      {
+        id: "diagnostics",
+        label: "Diagnóstico do aplicativo",
+        description: "Integridade, SQLCipher, armazenamento e logs.",
+        keywords: ["diagnóstico", "banco", "sqlcipher", "logs"],
+        category: "Configurações",
+        icon: "database",
+        run: () => router.push("/configuracoes#diagnostico"),
+      },
+      {
+        id: "export",
+        label: "Exportar dados",
+        description: "Abra a área de dados e portabilidade.",
+        keywords: ["exportar", "dados", "json", "csv"],
+        shortcut: "Ctrl Shift E",
+        category: "Ações",
+        icon: "data",
+        run: () => router.push("/dados-e-automacoes#exportar"),
+      },
+      {
+        id: "help",
+        label: "Central completa de ajuda",
+        description: "Primeiros passos, segurança, atalhos e suporte interno.",
+        keywords: ["ajuda", "atalhos", "suporte", "manual"],
+        shortcut: "Shift F1",
+        category: "Ajuda",
+        icon: "help",
+        run: () => router.push("/ajuda"),
+      },
+      ...navigationCommands,
+      ...helpCommands,
+    ];
+  }, [backupBusy, createQuickBackup, desktopSecurity, openCommandPalette, openContextHelp, router]);
 
   const value = useMemo<DesktopExperienceContextValue>(() => ({
     preferences,
@@ -322,9 +397,10 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
     performanceLoading,
     refreshPerformance,
     openCommandPalette,
+    openContextHelp,
     createQuickBackup,
     notify,
-  }), [createQuickBackup, notify, openCommandPalette, performance, performanceLoading, preferences, refreshPerformance, updatePreferences]);
+  }), [createQuickBackup, notify, openCommandPalette, openContextHelp, performance, performanceLoading, preferences, refreshPerformance, updatePreferences]);
 
   return (
     <DesktopExperienceContext.Provider value={value}>
@@ -335,6 +411,12 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
         mode={paletteMode}
         commands={commands}
         onClose={() => setPaletteOpen(false)}
+      />
+      <ContextualHelpPanel
+        open={contextHelpOpen}
+        topic={findContextualHelp(pathname || "/visao-geral")}
+        onClose={() => setContextHelpOpen(false)}
+        onOpenSearch={() => openCommandPalette("search")}
       />
       {notice ? (
         <aside className={`desktop-experience-toast ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>
