@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { recordLocalTechnicalError } from "@/lib/maintenance-preferences";
 
 type ClientErrorBoundaryProps = {
   children: ReactNode;
@@ -22,6 +23,7 @@ export class ClientErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("FinnacialUX frontend error", error, info.componentStack);
+    recordLocalTechnicalError(`${error.message}\n${info.componentStack ?? ""}`, "react");
     try {
       window.localStorage.setItem(
         "finnacialux-last-frontend-error",

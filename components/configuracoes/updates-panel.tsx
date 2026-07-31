@@ -10,6 +10,7 @@ import {
   loadDesktopUpdaterPreferences,
   saveDesktopUpdaterPreferences,
   skipDesktopUpdate,
+  deferDesktopUpdates,
 } from "@/lib/desktop/updater";
 import type {
   DesktopUpdateProgress,
@@ -178,6 +179,8 @@ export function UpdatesPanel({
           <input type="checkbox" checked={preferences.backupBeforeInstall} onChange={(event) => persistPreferences({ ...preferences, backupBeforeInstall: event.target.checked })} />
         </label>
         <small className="updates-last-check">Última verificação: {formatDate(preferences.lastCheckedAt)}</small>
+        <small className="updates-last-check">Adiamento automático: {preferences.deferredUntil ? `até ${formatDate(preferences.deferredUntil)}` : "inativo"}</small>
+        <div className="maintenance-inline-actions"><button className="text-action-button" type="button" onClick={() => persistPreferences(deferDesktopUpdates(new Date(Date.now() + 3 * 86_400_000).toISOString()))}>Adiar 3 dias</button><button className="text-action-button" type="button" onClick={() => persistPreferences(deferDesktopUpdates(null))}>Remover adiamento</button></div>
       </div>
 
       {availableUpdate ? (

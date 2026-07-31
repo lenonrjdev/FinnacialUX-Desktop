@@ -16,6 +16,7 @@ import { ProfileSettingsPanel } from "@/components/configuracoes/profile-setting
 import { SecurityPanel } from "@/components/configuracoes/security-panel";
 import { UpdatesPanel } from "@/components/configuracoes/updates-panel";
 import { ReleaseCandidatePanel } from "@/components/configuracoes/release-candidate-panel";
+import { MaintenancePanel } from "@/components/configuracoes/maintenance-panel";
 import { SettingsHeading } from "@/components/configuracoes/settings-heading";
 import { SettingsNavigation } from "@/components/configuracoes/settings-navigation";
 import { SettingsSummary } from "@/components/configuracoes/settings-summary";
@@ -181,6 +182,7 @@ export default function ConfiguracoesView() {
       accessibility: "acessibilidade",
       onboarding: "primeiros-passos",
       updates: "atualizacoes",
+      maintenance: "manutencao",
     };
     const hash = hashes[next];
     window.history.replaceState(null, "", hash ? `#${hash}` : window.location.pathname);
@@ -189,7 +191,8 @@ export default function ConfiguracoesView() {
   useEffect(() => {
     const syncViewFromHash = () => {
       const hash = window.location.hash;
-      if (hash === "#atualizacoes") setView("updates");
+      if (hash === "#manutencao") setView("maintenance");
+      else if (hash === "#atualizacoes") setView("updates");
       else if (hash === "#desktop") setView("desktop");
       else if (hash === "#acessibilidade") setView("accessibility");
       else if (hash === "#primeiros-passos") setView("onboarding");
@@ -539,7 +542,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility", "onboarding"] as SettingsView[]).includes(view)} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "maintenance", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility", "onboarding"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -601,6 +604,7 @@ export default function ConfiguracoesView() {
       {view === "desktop" ? <DesktopExperiencePanel /> : null}
       {view === "accessibility" ? <AccessibilityPanel /> : null}
       {view === "onboarding" ? <OnboardingSettingsPanel /> : null}
+      {view === "maintenance" ? <MaintenancePanel onFeedback={showFeedback} /> : null}
       {view === "updates" ? (
         <>
           <UpdatesPanel

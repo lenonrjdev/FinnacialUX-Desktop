@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
 import publicConfig from "@/release/updater-config.json";
 import { getDesktopDatabase, isDesktopRuntime } from "@/lib/desktop/database";
+import { isWithinMaintenanceWindow } from "@/lib/maintenance-engine";
+import { loadMaintenancePreferences, setMaintenanceUpdateDeferral } from "@/lib/maintenance-preferences";
 import type { NativeBackupRecord } from "@/types/desktop-protection";
 import type {
   DesktopUpdateCheckResult,
@@ -19,6 +21,7 @@ const DEFAULT_PREFERENCES: DesktopUpdaterPreferences = {
   backupBeforeInstall: true,
   lastCheckedAt: null,
   skippedVersion: null,
+  deferredUntil: null,
 };
 
 function getConfig(): DesktopUpdaterPublicConfig {
@@ -50,6 +53,9 @@ export function loadDesktopUpdaterPreferences(): DesktopUpdaterPreferences {
       backupBeforeInstall: parsed.backupBeforeInstall !== false,
       lastCheckedAt: typeof parsed.lastCheckedAt === "string" ? parsed.lastCheckedAt : null,
       skippedVersion: typeof parsed.skippedVersion === "string" ? parsed.skippedVersion : null,
+      deferredUntil: typeof parsed.deferredUntil === "string" && Date.parse(parsed.deferredUntil) > Date.now()
+        ? parsed.deferredUntil
+        : null,
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -71,6 +77,7 @@ function updatePreferences(patch: Partial<DesktopUpdaterPreferences>) {
 
 function isAutomaticCheckDue(preferences: DesktopUpdaterPreferences): boolean {
   if (!preferences.automaticCheck) return false;
+  if (preferences.deferredUntil && Date.parse(preferences.deferredUntil) > Date.now()) return false;
   if (!preferences.lastCheckedAt) return true;
   const last = Date.parse(preferences.lastCheckedAt);
   if (!Number.isFinite(last)) return true;
@@ -88,7 +95,7 @@ function endpointHost(endpoint: string): string {
 export async function getDesktopUpdaterStatus(): Promise<DesktopUpdaterStatus> {
   const config = getConfig();
   return {
-    currentVersion: isDesktopRuntime() ? await getVersion() : "0.6.0",
+    currentVersion: isDesktopRuntime() ? await getVersion() : "1.1.0",
     configured: config.enabled && config.endpoint.startsWith("https://"),
     developmentBuild: isDesktopDevelopmentBuild(),
     channel: "stable",
@@ -133,6 +140,11 @@ export function skipDesktopUpdate(version: string | null): DesktopUpdaterPrefere
   return updatePreferences({ skippedVersion: version });
 }
 
+export function deferDesktopUpdates(until: string | null): DesktopUpdaterPreferences {
+  setMaintenanceUpdateDeferral(until);
+  return updatePreferences({ deferredUntil: until });
+}
+
 export async function createPreUpdateBackup(credential: string): Promise<NativeBackupRecord> {
   await getDesktopDatabase();
   return invoke<NativeBackupRecord>("create_pre_update_backup", { credential });
@@ -144,6 +156,10 @@ export async function installDesktopUpdate(
   backupCredential: string | null,
   onProgress: (progress: DesktopUpdateProgress) => void,
 ): Promise<void> {
+  const maintenance = loadMaintenancePreferences();
+  if (maintenance.installOnlyInsideWindow && !isWithinMaintenanceWindow(maintenance)) {
+    throw new Error("A instalação está fora da janela de manutenção configurada.");
+  }
   if (preferences.backupBeforeInstall) {
     if (!backupCredential) throw new Error("O cofre local não disponibilizou a chave do backup pré-atualização.");
     onProgress({

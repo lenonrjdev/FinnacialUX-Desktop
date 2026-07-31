@@ -21,6 +21,7 @@ export const settingsContent = {
     accessibility: "Acessibilidade",
     onboarding: "Primeiros passos",
     updates: "Atualizações",
+    maintenance: "Manutenção",
   },
   summary: {
     account: "Conta principal",

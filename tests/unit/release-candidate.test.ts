@@ -5,10 +5,11 @@ import {
   releaseAssetName,
   releaseChannel,
   releaseTag,
+  stableReleaseConfig,
 } from "@/lib/release-candidate";
 
 const readySnapshot = {
-  version: "0.18.0-rc.1",
+  version: "1.1.0",
   schemaVersion: 14,
   updaterConfigured: true,
   developmentBuild: false,
@@ -16,37 +17,45 @@ const readySnapshot = {
   windowsRuntime: true,
 };
 
-describe("release candidate", () => {
-  it("interpreta a versão candidata", () => {
-    expect(parseDesktopVersion("0.18.0-rc.1")).toEqual({
+const stableConfig = {
+  ...stableReleaseConfig,
+  version: "1.1.0",
+  promotedFrom: "1.0.0",
+};
+
+describe("stable release", () => {
+  it("interpreta versão estável e candidata", () => {
+    expect(parseDesktopVersion("1.1.0")).toEqual({
       valid: true,
-      major: 0,
-      minor: 18,
+      major: 1,
+      minor: 1,
       patch: 0,
-      prerelease: "rc.1",
+      prerelease: null,
     });
+    expect(parseDesktopVersion("0.18.0-rc.1").prerelease).toBe("rc.1");
   });
 
   it("distingue desenvolvimento, candidato e estável", () => {
     expect(releaseChannel("0.18.0-rc.1")).toBe("release-candidate");
-    expect(releaseChannel("1.0.0")).toBe("stable");
-    expect(releaseChannel("0.18.0-rc.1", true)).toBe("development");
+    expect(releaseChannel("1.1.0")).toBe("stable");
+    expect(releaseChannel("1.1.0", true)).toBe("development");
   });
 
-  it("gera nomes determinísticos de tag e instalador", () => {
-    expect(releaseTag("0.18.0-rc.1")).toBe("desktop-v0.18.0-rc.1");
-    expect(releaseAssetName("0.18.0-rc.1")).toBe("FinnacialUX-Desktop_0.18.0-rc.1_x64-setup.exe");
+  it("gera nomes determinísticos da versão 1.1", () => {
+    expect(releaseTag("1.1.0")).toBe("desktop-v1.1.0");
+    expect(releaseAssetName("1.1.0")).toBe("FinnacialUX-Desktop_1.1.0_x64-setup.exe");
   });
 
-  it("aprova somente o candidato com schema congelado e proteções ativas", () => {
-    const report = createReleaseReadinessReport(readySnapshot);
+  it("aprova a versão estável com schema congelado e proteções ativas", () => {
+    const report = createReleaseReadinessReport(readySnapshot, stableConfig);
     expect(report.ready).toBe(true);
     expect(report.blocked).toBe(0);
-    expect(report.channel).toBe("release-candidate");
+    expect(report.channel).toBe("stable");
+    expect(report.promotedFrom).toBe("1.0.0");
   });
 
   it("bloqueia divergência de schema", () => {
-    const report = createReleaseReadinessReport({ ...readySnapshot, schemaVersion: 15 });
+    const report = createReleaseReadinessReport({ ...readySnapshot, schemaVersion: 15 }, stableConfig);
     expect(report.ready).toBe(false);
     expect(report.checks.find((item) => item.id === "schema")?.status).toBe("blocked");
   });
@@ -56,13 +65,19 @@ describe("release candidate", () => {
       ...readySnapshot,
       updaterConfigured: false,
       backupBeforeInstall: false,
-    });
+    }, stableConfig);
     expect(report.ready).toBe(false);
     expect(report.blocked).toBe(2);
   });
 
-  it("trata o modo de desenvolvimento como atenção sem falsificar o canal", () => {
-    const report = createReleaseReadinessReport({ ...readySnapshot, developmentBuild: true });
+  it("bloqueia configuração sem procedência da RC", () => {
+    const report = createReleaseReadinessReport(readySnapshot, { ...stableConfig, promotedFrom: undefined });
+    expect(report.ready).toBe(false);
+    expect(report.checks.find((item) => item.id === "promotion")?.status).toBe("blocked");
+  });
+
+  it("trata modo de desenvolvimento como atenção", () => {
+    const report = createReleaseReadinessReport({ ...readySnapshot, developmentBuild: true }, stableConfig);
     expect(report.channel).toBe("development");
     expect(report.attention).toBeGreaterThan(0);
   });

@@ -1,0 +1,52 @@
+name: Validar Release Estável
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "release/**"
+      - "scripts/20_*"
+      - "scripts/21_*"
+      - "scripts/stable-release.mjs"
+      - "scripts/06_PUBLICAR_RELEASE_GITHUB.ps1"
+      - "src-tauri/migrations/**"
+      - "src-tauri/src/encrypted_database.rs"
+      - "src-tauri/src/diagnostics.rs"
+      - "src-tauri/src/protection.rs"
+      - "components/configuracoes/release-candidate-panel.tsx"
+      - "components/configuracoes/maintenance-panel.tsx"
+      - "lib/maintenance-*.ts"
+      - "lib/release-candidate.ts"
+      - "types/release-candidate.ts"
+
+permissions:
+  contents: read
+
+jobs:
+  stable-source:
+    name: Fonte estável e schema congelado
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validar versão, promoção e hashes das migrations
+        shell: pwsh
+        run: node scripts/stable-release.mjs verify-source .
+
+  upgrade-regression:
+    name: Atualização dos schemas históricos
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Executar matriz de migrations e preservação
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml encrypted_database::regression_tests::every_historical_schema_upgrades_to_fourteen_without_losing_core_data -- --exact

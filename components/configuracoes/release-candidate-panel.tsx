@@ -16,13 +16,13 @@ import { getDesktopUpdaterStatus } from "@/lib/desktop/updater";
 import {
   createReleaseReadinessReport,
   formatReleaseReadinessSummary,
-  releaseCandidateConfig,
+  stableReleaseConfig,
 } from "@/lib/release-candidate";
-import type { ReleaseCandidateSnapshot } from "@/types/release-candidate";
+import type { ReleaseSnapshot } from "@/types/release-candidate";
 
-const browserFallback: ReleaseCandidateSnapshot = {
-  version: releaseCandidateConfig.version,
-  schemaVersion: releaseCandidateConfig.schemaVersion,
+const browserFallback: ReleaseSnapshot = {
+  version: stableReleaseConfig.version,
+  schemaVersion: stableReleaseConfig.schemaVersion,
   updaterConfigured: false,
   developmentBuild: true,
   backupBeforeInstall: true,
@@ -30,7 +30,7 @@ const browserFallback: ReleaseCandidateSnapshot = {
 };
 
 export function ReleaseCandidatePanel({ onFeedback }: { onFeedback: (message: string) => void }) {
-  const [snapshot, setSnapshot] = useState<ReleaseCandidateSnapshot>(browserFallback);
+  const [snapshot, setSnapshot] = useState<ReleaseSnapshot>(browserFallback);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -68,9 +68,9 @@ export function ReleaseCandidatePanel({ onFeedback }: { onFeedback: (message: st
   async function copySummary() {
     try {
       await navigator.clipboard.writeText(formatReleaseReadinessSummary(report));
-      onFeedback("Resumo da versão candidata copiado.");
+      onFeedback("Resumo da versão estável copiado.");
     } catch {
-      setError("Não foi possível copiar o resumo da versão candidata.");
+      setError("Não foi possível copiar o resumo da versão estável.");
     }
   }
 
@@ -78,9 +78,9 @@ export function ReleaseCandidatePanel({ onFeedback }: { onFeedback: (message: st
     <section className="settings-section release-candidate-panel">
       <div className="settings-section-heading">
         <div>
-          <span className="section-eyebrow">Homologação para a versão 1.0</span>
-          <h2>Release Candidate</h2>
-          <p>Confirme versão, schema congelado, updater e backup antes de distribuir o instalador candidato.</p>
+          <span className="section-eyebrow">Canal estável e suporte</span>
+          <h2>FinnacialUX Desktop 1.1</h2>
+          <p>Confirme versão, schema congelado, updater e backup para manter as próximas atualizações protegidas.</p>
         </div>
         <button className="secondary-action-button" type="button" disabled={loading} onClick={() => void refresh()}>
           <RefreshIcon /> {loading ? "Verificando..." : "Atualizar estado"}
@@ -90,9 +90,9 @@ export function ReleaseCandidatePanel({ onFeedback }: { onFeedback: (message: st
       <div className={`release-candidate-summary ${report.ready ? "ready" : "blocked"}`}>
         <div className="release-candidate-badge">{report.ready ? <CheckIcon /> : <WarningIcon />}</div>
         <div>
-          <span>{report.ready ? "Pronto para homologar" : "Existem pendências"}</span>
-          <h3>{releaseCandidateConfig.version}</h3>
-          <p>Schema {releaseCandidateConfig.schemaVersion} congelado · tag {report.tag}</p>
+          <span>{report.ready ? "Versão estável íntegra" : "Existem pendências"}</span>
+          <h3>{stableReleaseConfig.version}</h3>
+          <p>Schema {stableReleaseConfig.schemaVersion} congelado · promovida de {report.promotedFrom}</p>
         </div>
         <strong>{report.passed}/{report.checks.length}</strong>
       </div>
@@ -107,8 +107,8 @@ export function ReleaseCandidatePanel({ onFeedback }: { onFeedback: (message: st
       </div>
 
       <div className="release-candidate-artifacts">
-        <div><FileCheckIcon /><span><strong>Instalador esperado</strong><code>{report.assetName}</code></span></div>
-        <div><ArchiveIcon /><span><strong>Publicação segura</strong><small>Pré-release, sem substituir a versão estável mais recente.</small></span></div>
+        <div><FileCheckIcon /><span><strong>Instalador estável</strong><code>{report.assetName}</code></span></div>
+        <div><ArchiveIcon /><span><strong>Publicação oficial</strong><small>Release estável marcada como Latest, com SHA-256 e assinatura do updater.</small></span></div>
       </div>
 
       <div className="release-candidate-actions">

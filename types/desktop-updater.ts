@@ -6,6 +6,7 @@ export type DesktopUpdaterPreferences = {
   backupBeforeInstall: boolean;
   lastCheckedAt: string | null;
   skippedVersion: string | null;
+  deferredUntil: string | null;
 };
 
 export type DesktopUpdaterPublicConfig = {

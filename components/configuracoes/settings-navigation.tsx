@@ -28,6 +28,7 @@ const navigation: Array<{ key: SettingsView; icon: React.ReactNode }> = [
   { key: "accessibility", icon: <EyeIcon /> },
   { key: "onboarding", icon: <ShieldIcon /> },
   { key: "updates", icon: <RefreshIcon /> },
+  { key: "maintenance", icon: <DatabaseIcon /> },
 ];
 
 export function SettingsNavigation({ value, onChange }: { value: SettingsView; onChange: (view: SettingsView) => void }) {

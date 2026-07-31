@@ -1,6 +1,6 @@
 [package]
 name = "finnacialux-desktop"
-version = "0.18.0-rc.1"
+version = "1.1.0"
 description = "FinnacialUX Desktop — gestão financeira offline"
 authors = ["Ateliux"]
 edition = "2021"

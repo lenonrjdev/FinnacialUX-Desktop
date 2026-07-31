@@ -27149,3 +27149,26 @@ html[data-reduce-motion="true"] .onboarding-dialog {
   .release-candidate-checks,
   .release-candidate-artifacts { grid-template-columns: 1fr; }
 }
+
+
+/* Fase 20 — manutenção pós-lançamento */
+.maintenance-panel { margin-top: 22px; }
+.maintenance-score-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 20px; border: 1px solid var(--border-color); background: var(--surface-color); margin: 18px 0; }
+.maintenance-score-card.ready { border-color: color-mix(in srgb, #1f9d69 42%, var(--border-color)); }
+.maintenance-score-card.blocked { border-color: color-mix(in srgb, #d64b4b 42%, var(--border-color)); }
+.maintenance-score-value { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: var(--muted-surface); font-size: 1.35rem; font-weight: 800; }
+.maintenance-score-card p { margin: 4px 0 0; color: var(--text-secondary); }
+.maintenance-check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.maintenance-check-grid article { display: grid; grid-template-columns: auto 1fr; gap: 11px; padding: 15px; border: 1px solid var(--border-color); background: var(--surface-color); }
+.maintenance-check-grid article span { display: grid; gap: 4px; }
+.maintenance-check-grid article small { color: var(--text-secondary); line-height: 1.45; }
+.maintenance-check-grid article.passed > div { color: #1f9d69; }
+.maintenance-check-grid article.attention > div { color: #b47b16; }
+.maintenance-check-grid article.blocked > div { color: #d64b4b; }
+.maintenance-preferences-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.maintenance-inline-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.maintenance-artifacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.maintenance-artifacts > div { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 14px; border: 1px solid var(--border-color); }
+.maintenance-artifacts span { display: grid; gap: 3px; }
+.maintenance-artifacts small { color: var(--text-secondary); }
+@media (max-width: 900px) { .maintenance-check-grid, .maintenance-preferences-grid, .maintenance-artifacts { grid-template-columns: 1fr; } .maintenance-score-card { grid-template-columns: auto 1fr; } .maintenance-score-card > svg { display: none; } }
