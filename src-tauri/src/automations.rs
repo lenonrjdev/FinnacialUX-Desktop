@@ -753,6 +753,20 @@ fn build_preview(
     })
 }
 
+pub(crate) async fn simulate_automation_preview(
+    app: &AppHandle,
+    workspace_id: &str,
+    reference_date: &str,
+) -> Result<AutomationPreview, String> {
+    let state = app.state::<EncryptedDatabaseState>();
+    let mut connection = connect_app_database(app, &state).await?;
+    let preferences = load_preferences(&mut connection, workspace_id).await?;
+    let documents = read_documents(&mut connection, workspace_id).await?;
+    let alert_states = load_alert_states(&mut connection, workspace_id).await?;
+    connection.close().await.map_err(to_error)?;
+    build_preview(&documents, &preferences, &alert_states, reference_date)
+}
+
 fn run_from_row(row: &sqlx::sqlite::SqliteRow) -> Result<AutomationRun, String> {
     let affected_json: String = row.try_get("affected_modules_json").unwrap_or_else(|_| "[]".to_string());
     Ok(AutomationRun {

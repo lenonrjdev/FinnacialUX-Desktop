@@ -15,6 +15,8 @@ export const settingsContent = {
     backups: "Backups",
     continuity: "Continuidade",
     diagnostics: "Diagnóstico",
+    performance: "Desempenho",
+    background: "Rotinas locais",
     desktop: "Desktop",
     accessibility: "Acessibilidade",
     updates: "Atualizações",

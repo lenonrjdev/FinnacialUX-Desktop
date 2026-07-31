@@ -101,6 +101,8 @@ export type ApplyReconciliationImportRequest = PreviewReconciliationImportReques
   sourceChecksum: string;
   previewChecksum: string;
   decisions: ReconciliationDecision[];
+  operationId?: string;
+  batchSize?: number;
 };
 
 export type ReconciliationImportRecord = {

@@ -7,6 +7,8 @@ export type SettingsView =
   | "backups"
   | "continuity"
   | "diagnostics"
+  | "performance"
+  | "background"
   | "desktop"
   | "accessibility"
   | "updates";

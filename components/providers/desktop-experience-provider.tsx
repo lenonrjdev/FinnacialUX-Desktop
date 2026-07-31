@@ -272,6 +272,14 @@ export function DesktopExperienceProvider({ children }: { children: React.ReactN
       run: () => router.push("/configuracoes#desktop"),
     },
     {
+      id: "background-tasks",
+      label: "Rotinas locais",
+      description: "Fila, notificações, tentativas e execução em segundo plano.",
+      keywords: ["rotinas", "agendador", "notificações", "fila"],
+      icon: "settings",
+      run: () => router.push("/configuracoes#rotinas"),
+    },
+    {
       id: "accessibility",
       label: "Acessibilidade",
       description: "Contraste, movimento, texto e foco do teclado.",

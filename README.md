@@ -1,7 +1,7 @@
 # FinnacialUX Desktop
 
 Aplicativo desktop offline do FinnacialUX, construído com Tauri 2, Next.js,
-React, TypeScript e SQLCipher. A versão `0.8.0` reúne criptografia integral do banco local, Stronghold,
+React, TypeScript e SQLCipher. A versão `0.16.0` reúne criptografia integral do banco local, Stronghold,
 Argon2id, PIN, backups criptografados, atualizações assinadas, integração
 nativa com o Windows, acessibilidade, portabilidade protegida dos dados e uma
 suíte automatizada de regressão para os fluxos críticos.
@@ -223,3 +223,51 @@ reabertura auditada e comprovantes armazenados no SQLCipher.
 ```
 
 Consulte também `docs/CONCILIACAO_FECHAMENTO_FINANCEIRO.md`.
+
+
+## Fase 14 — desempenho e grandes volumes
+
+A versão `0.14.0` adiciona paginação nativa sobre um índice derivado no
+SQLCipher, filtros executados no banco, importações em lotes com progresso e
+cancelamento, métricas locais sanitizadas, benchmark e manutenção com
+`ANALYZE`, `PRAGMA optimize` e checkpoint. Nenhuma telemetria é enviada para
+serviços externos.
+
+```powershell
+.\15_APLICAR_FASE_14.cmd
+.\15_VALIDAR_FASE_14.cmd
+```
+
+A central fica em **Configurações → Desempenho**. Consulte também
+`docs/DESEMPENHO_GRANDES_VOLUMES.md`.
+
+## Fase 15 — rotinas locais e notificações nativas
+
+A versão `0.15.0` adiciona um agendador local com fila persistente, prevenção de
+concorrência, tentativas com backoff, horário silencioso, histórico auditável e
+notificações nativas resumidas. As rotinas analisam vencimentos, riscos, metas,
+orçamentos, fechamento, backups e automações, mas nunca alteram dados
+financeiros sem a confirmação manual do usuário.
+
+```powershell
+.\16_APLICAR_FASE_15.cmd
+.\16_VALIDAR_FASE_15.cmd
+```
+
+A central fica em **Configurações → Rotinas locais**. Consulte também
+`docs/ROTINAS_LOCAIS_NOTIFICACOES.md`.
+
+## Fase 16 — diagnóstico, auditoria e suporte local
+
+A versão `0.16.0` amplia **Configurações → Diagnóstico** com auditoria explicável,
+teste reversível de escrita, ensaio de restauração temporário, saúde de backups,
+reparos técnicos controlados e pacote `.fuxsupport` verificável por SHA-256.
+Nenhuma senha, chave, saldo, descrição ou documento financeiro é exportado.
+
+```powershell
+.\17_APLICAR_FASE_16.cmd
+.\17_VALIDAR_FASE_16.cmd
+```
+
+Consulte também `docs/DIAGNOSTICO_AUDITORIA_SUPORTE.md`.
+

@@ -8,6 +8,7 @@ use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use sqlx::{Connection, Row, SqliteConnection};
 use crate::command_worker::run_local_async_worker;
+use crate::diagnostics::sanitize_log_line;
 use crate::encrypted_database::{
     connect_app_database, connect_plaintext_path, export_plaintext_snapshot,
     replace_from_plaintext_snapshot, DatabaseEncryptionStatus, EncryptedDatabaseState,
@@ -28,7 +29,7 @@ const BACKUP_EXTENSION: &str = "fuxbackup";
 const DIAGNOSTIC_EXTENSION: &str = "fuxdiag";
 const BACKUP_MAGIC_V2: &[u8] = b"FUXBACKUP2\n";
 const BACKUP_MAGIC_V3: &[u8] = b"FUXBACKUP3\n";
-const CURRENT_SCHEMA_VERSION: i64 = 10;
+const CURRENT_SCHEMA_VERSION: i64 = 13;
 const SESSION_MARKER_FILE: &str = "session-active.marker";
 
 #[derive(Default)]
@@ -1271,7 +1272,7 @@ fn read_recent_logs(directory: &Path) -> Vec<String> {
     let mut lines = Vec::new();
     for path in files.into_iter().take(3) {
         if let Ok(content) = fs::read_to_string(path) {
-            lines.extend(content.lines().rev().take(150).map(str::to_string));
+            lines.extend(content.lines().rev().take(150).map(sanitize_log_line));
         }
         if lines.len() >= 300 {
             break;
@@ -1294,9 +1295,26 @@ pub async fn export_diagnostic_package(
     let report = get_diagnostics_internal(&app, &database_state, safe_mode, &recovery_state).await?;
     let payload = serde_json::json!({
         "format": "finnacialux-diagnostic",
-        "formatVersion": 1,
-        "privacy": "Este pacote não contém senhas, lançamentos, saldos ou documentos financeiros.",
-        "diagnostics": report,
+        "formatVersion": 2,
+        "privacy": "Este pacote não contém senhas, chaves, caminhos, lançamentos, saldos ou documentos financeiros.",
+        "diagnostics": {
+            "appName": report.app_name,
+            "appVersion": report.app_version,
+            "identifier": report.identifier,
+            "operatingSystem": report.operating_system,
+            "architecture": report.architecture,
+            "databaseExists": report.database_exists,
+            "databaseSizeBytes": report.database_size_bytes,
+            "databaseEncrypted": report.database_encrypted,
+            "databaseCipherVersion": report.database_cipher_version,
+            "backupCount": report.backup_count,
+            "lastBackupAt": report.last_backup_at,
+            "previousUncleanShutdown": report.previous_unclean_shutdown,
+            "safeMode": report.safe_mode,
+            "integrity": report.integrity,
+            "migrations": report.migrations,
+            "generatedAt": report.generated_at,
+        },
         "recentSanitizedLogs": read_recent_logs(&logs_dir(&app)?),
     });
     fs::write(

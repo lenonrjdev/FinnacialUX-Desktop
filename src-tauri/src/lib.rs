@@ -8,7 +8,11 @@ mod automations;
 mod intelligence;
 mod planning;
 mod reconciliation;
+mod performance;
+mod background_tasks;
+mod diagnostics;
 
+use background_tasks::BackgroundSchedulerState;
 use encrypted_database::EncryptedDatabaseState;
 use protection::{clear_session_marker, initialize_session_marker, RecoveryState};
 use tauri::{Emitter, Manager, RunEvent};
@@ -33,12 +37,13 @@ fn show_main_window(app: &tauri::AppHandle) {
 fn setup_system_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Abrir FinnacialUX", true, None::<&str>)?;
     let lock_item = MenuItem::with_id(app, "lock", "Bloquear aplicativo", true, None::<&str>)?;
+    let routines_item = MenuItem::with_id(app, "routines", "Executar rotinas locais", true, None::<&str>)?;
     let backup_item = MenuItem::with_id(app, "backup", "Criar backup", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, "quit", "Encerrar FinnacialUX", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&open_item, &lock_item, &backup_item, &separator, &quit_item],
+        &[&open_item, &lock_item, &routines_item, &backup_item, &separator, &quit_item],
     )?;
 
     let mut builder = TrayIconBuilder::new()
@@ -51,6 +56,11 @@ fn setup_system_tray(app: &mut tauri::App) -> tauri::Result<()> {
                 show_main_window(app);
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.emit("finnacialux-lock-requested-native", ());
+                }
+            }
+            "routines" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("finnacialux-background-run-requested-native", ());
                 }
             }
             "backup" => {
@@ -86,7 +96,8 @@ pub fn run() {
     let database_state = EncryptedDatabaseState::default();
     let builder = tauri::Builder::default()
         .manage(recovery_state)
-        .manage(database_state);
+        .manage(database_state)
+        .manage(BackgroundSchedulerState::default());
 
     #[cfg(desktop)]
     let builder = builder
@@ -207,6 +218,36 @@ pub fn run() {
             reconciliation::reconciliation_list_evidence,
             reconciliation::reconciliation_read_evidence,
             reconciliation::reconciliation_delete_evidence,
+            performance::performance_get_preferences,
+            performance::performance_save_preferences,
+            performance::performance_list_transactions_page,
+            performance::performance_rebuild_transaction_index,
+            performance::performance_cancel_operation,
+            performance::performance_list_operations,
+            performance::performance_list_metrics,
+            performance::performance_get_database_health,
+            performance::performance_run_database_maintenance,
+            performance::performance_benchmark_transactions,
+            background_tasks::background_get_preferences,
+            background_tasks::background_save_preferences,
+            background_tasks::background_start_scheduler,
+            background_tasks::background_stop_scheduler,
+            background_tasks::background_run_due_tasks,
+            background_tasks::background_get_status,
+            background_tasks::background_list_tasks,
+            background_tasks::background_list_runs,
+            background_tasks::background_cancel_task,
+            background_tasks::background_retry_task,
+            background_tasks::background_list_notifications,
+            background_tasks::background_flush_notifications,
+            background_tasks::background_ack_notification,
+            diagnostics::diagnostics_preview,
+            diagnostics::diagnostics_run_suite,
+            diagnostics::diagnostics_list_runs,
+            diagnostics::diagnostics_list_repairs,
+            diagnostics::diagnostics_apply_repair,
+            diagnostics::diagnostics_export_support_package,
+            diagnostics::diagnostics_validate_support_package,
         ])
         .setup(|app| {
             let local_data_dir = app

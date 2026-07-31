@@ -22,7 +22,7 @@ use zeroize::Zeroizing;
 
 const DATABASE_FILE_NAME: &str = "finnacialux.db";
 const LEGACY_BACKUP_MAGIC: &[u8] = b"FUXLEGACY1\n";
-const CURRENT_SCHEMA_VERSION: i64 = 10;
+const CURRENT_SCHEMA_VERSION: i64 = 13;
 
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "create_finnacialux_desktop_schema", include_str!("../migrations/0001_initial.sql")),
@@ -35,6 +35,9 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     (8, "add_local_financial_intelligence", include_str!("../migrations/0008_local_financial_intelligence.sql")),
     (9, "add_decision_oriented_financial_planning", include_str!("../migrations/0009_decision_oriented_financial_planning.sql")),
     (10, "add_bank_reconciliation_and_monthly_closing", include_str!("../migrations/0010_bank_reconciliation_and_monthly_closing.sql")),
+    (11, "add_large_volume_performance_and_native_pagination", include_str!("../migrations/0011_large_volume_performance.sql")),
+    (12, "add_local_background_tasks_and_native_notifications", include_str!("../migrations/0012_local_background_tasks_and_notifications.sql")),
+    (13, "add_local_diagnostics_auditing_and_support", include_str!("../migrations/0013_local_diagnostics_and_support.sql")),
 ];
 
 #[derive(Default)]
@@ -1253,7 +1256,7 @@ mod regression_tests {
     use sqlx::Connection;
 
     #[tokio::test]
-    async fn migrations_reach_schema_nine_and_are_idempotent() {
+    async fn migrations_reach_schema_thirteen_and_are_idempotent() {
         let mut connection = SqliteConnectOptions::new()
             .filename(":memory:")
             .create_if_missing(true)
@@ -1289,6 +1292,22 @@ mod regression_tests {
         assert!(table_exists(&mut connection, "financial_plans").await.unwrap());
         assert!(table_exists(&mut connection, "financial_plan_reviews").await.unwrap());
         assert!(table_exists(&mut connection, "financial_planning_decisions").await.unwrap());
+        assert!(table_exists(&mut connection, "performance_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "finance_transaction_index").await.unwrap());
+        assert!(table_exists(&mut connection, "performance_index_state").await.unwrap());
+        assert!(table_exists(&mut connection, "performance_operation_jobs").await.unwrap());
+        assert!(table_exists(&mut connection, "performance_operation_metrics").await.unwrap());
+        assert!(table_exists(&mut connection, "background_task_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "background_task_queue").await.unwrap());
+        assert!(table_exists(&mut connection, "background_task_runs").await.unwrap());
+        assert!(table_exists(&mut connection, "background_notification_outbox").await.unwrap());
+        assert!(table_exists(&mut connection, "background_scheduler_leases").await.unwrap());
+        assert!(table_exists(&mut connection, "diagnostic_preferences").await.unwrap());
+        assert!(table_exists(&mut connection, "diagnostic_runs").await.unwrap());
+        assert!(table_exists(&mut connection, "diagnostic_checks").await.unwrap());
+        assert!(table_exists(&mut connection, "diagnostic_repairs").await.unwrap());
+        assert!(table_exists(&mut connection, "support_package_exports").await.unwrap());
+        assert!(table_exists(&mut connection, "diagnostic_probe").await.unwrap());
     }
 
     #[test]

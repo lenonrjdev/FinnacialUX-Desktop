@@ -53,7 +53,11 @@ export function previewReconciliationImport(request: PreviewReconciliationImport
 
 export function applyReconciliationImport(request: ApplyReconciliationImportRequest): Promise<ReconciliationImportRecord> {
   assertWritable();
-  return invoke<ReconciliationImportRecord>("reconciliation_apply_import", { request: { workspaceId: getReconciliationWorkspaceId(), ...request } });
+  const operationId = request.operationId ?? crypto.randomUUID();
+  const batchSize = Math.min(2_000, Math.max(100, Math.round(request.batchSize ?? 500)));
+  return invoke<ReconciliationImportRecord>("reconciliation_apply_import", {
+    request: { workspaceId: getReconciliationWorkspaceId(), ...request, operationId, batchSize },
+  });
 }
 
 export function listReconciliationImports(limit = 100): Promise<ReconciliationImportRecord[]> {

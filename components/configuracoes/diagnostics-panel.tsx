@@ -1,164 +1,292 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DiagnosticChecksPanel } from "@/components/configuracoes/diagnostic-checks-panel";
+import { DiagnosticHistoryPanel } from "@/components/configuracoes/diagnostic-history-panel";
+import { DiagnosticRepairsPanel } from "@/components/configuracoes/diagnostic-repairs-panel";
 import { useDesktopSecurity } from "@/components/providers/desktop-security-provider";
 import {
   ArchiveIcon,
   CheckIcon,
+  CopyIcon,
   DatabaseIcon,
   DownloadIcon,
-  HistoryIcon,
+  FileCheckIcon,
+  KeyIcon,
   RefreshIcon,
+  ShieldIcon,
   WarningIcon,
 } from "@/components/shared/icons";
 import {
-  chooseDiagnosticDestination,
-  exportDiagnosticPackage,
-  getDesktopDiagnostics,
-  openDesktopFolder,
-  runDatabaseIntegrityCheck,
-} from "@/lib/desktop/protection";
+  applyDiagnosticRepair,
+  chooseSupportPackageDestination,
+  chooseSupportPackageSource,
+  exportSupportPackage,
+  getClientDiagnosticContext,
+  listDiagnosticRepairs,
+  listDiagnosticRuns,
+  previewDiagnosticSuite,
+  runDiagnosticSuite,
+  validateSupportPackage,
+} from "@/lib/desktop/diagnostics";
+import {
+  diagnosticHealthLabel,
+  formatDiagnosticSummary,
+  recommendedRepairs,
+} from "@/lib/diagnostic-engine";
 import { formatFileSize, formatSettingsDateTime } from "@/lib/settings";
-import type { DiagnosticReport } from "@/types/desktop-protection";
+import type {
+  ClientDiagnosticContext,
+  DiagnosticRepairAction,
+  DiagnosticRepairRecord,
+  DiagnosticRunSummary,
+  DiagnosticSuiteResult,
+  SupportPackageResult,
+  SupportPackageValidation,
+} from "@/types/diagnostics";
+
+const healthText = {
+  healthy: "Ambiente saudável",
+  attention: "Revisão recomendada",
+  failed: "Atenção necessária",
+};
 
 export function DiagnosticsPanel({ onFeedback }: { onFeedback: (message: string) => void }) {
   const { confirmSensitiveAction } = useDesktopSecurity();
-  const [report, setReport] = useState<DiagnosticReport | null>(null);
+  const [suite, setSuite] = useState<DiagnosticSuiteResult | null>(null);
+  const [context, setContext] = useState<ClientDiagnosticContext | null>(null);
+  const [runs, setRuns] = useState<DiagnosticRunSummary[]>([]);
+  const [repairs, setRepairs] = useState<DiagnosticRepairRecord[]>([]);
+  const [lastPackage, setLastPackage] = useState<SupportPackageResult | null>(null);
+  const [validation, setValidation] = useState<SupportPackageValidation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [checking, setChecking] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function refresh() {
+  const refreshHistory = useCallback(async () => {
+    const [nextRuns, nextRepairs] = await Promise.all([
+      listDiagnosticRuns(20),
+      listDiagnosticRepairs(20),
+    ]);
+    setRuns(nextRuns);
+    setRepairs(nextRepairs);
+  }, []);
+
+  const loadPreview = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setReport(await getDesktopDiagnostics());
+      const nextContext = await getClientDiagnosticContext();
+      const [nextSuite] = await Promise.all([
+        previewDiagnosticSuite({
+          includeReadWriteTest: false,
+          includeRestoreDrill: false,
+          clientContext: nextContext,
+        }),
+        refreshHistory(),
+      ]);
+      setContext(nextContext);
+      setSuite(nextSuite);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }
+  }, [refreshHistory]);
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    void loadPreview();
+  }, [loadPreview]);
 
-  async function verify() {
-    setChecking(true);
+  const health = suite
+    ? diagnosticHealthLabel(suite.score, suite.checksFailed, suite.checksAttention)
+    : "attention";
+  const availableRepairs = suite ? recommendedRepairs(suite.checks) : [];
+
+  async function runFullAudit() {
+    if (!context || !(await confirmSensitiveAction("security"))) return;
+    setBusy(true);
     setError("");
     try {
-      const integrity = await runDatabaseIntegrityCheck();
-      setReport((current) => current ? { ...current, integrity } : current);
-      onFeedback(integrity.ok ? "O banco local passou em todas as verificações." : "A verificação encontrou um problema no banco local.");
+      const result = await runDiagnosticSuite({
+        includeReadWriteTest: true,
+        includeRestoreDrill: true,
+        clientContext: context,
+      });
+      setSuite(result);
+      await refreshHistory();
+      onFeedback(result.persisted
+        ? "Auditoria local concluída e registrada."
+        : "Auditoria concluída sem gravação porque o modo somente leitura está ativo.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      setChecking(false);
+      setBusy(false);
+    }
+  }
+
+  async function runRepair(action: DiagnosticRepairAction) {
+    if (!suite || !(await confirmSensitiveAction("security"))) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await applyDiagnosticRepair(action, suite.persisted ? suite.id : undefined);
+      onFeedback(result.resultSummary);
+      await loadPreview();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
     }
   }
 
   async function exportPackage() {
-    if (!(await confirmSensitiveAction("export"))) return;
-    const destination = await chooseDiagnosticDestination();
+    if (!context || !(await confirmSensitiveAction("export"))) return;
+    const destination = await chooseSupportPackageDestination();
     if (!destination) return;
+    setBusy(true);
+    setError("");
     try {
-      const path = await exportDiagnosticPackage(destination);
-      onFeedback(`Diagnóstico exportado em ${path}`);
+      const result = await exportSupportPackage(destination, context, true);
+      setLastPackage(result);
+      onFeedback(`Pacote de suporte exportado: ${result.fileName}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function validatePackage() {
+    const source = await chooseSupportPackageSource();
+    if (!source) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await validateSupportPackage(source);
+      setValidation(result);
+      onFeedback(result.message);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copySummary() {
+    if (!suite) return;
+    try {
+      await navigator.clipboard.writeText(formatDiagnosticSummary(suite));
+      onFeedback("Resumo técnico copiado sem dados financeiros.");
+    } catch {
+      setError("O navegador não permitiu copiar o resumo técnico.");
     }
   }
 
   if (loading) {
-    return <section className="settings-panel diagnostic-loading-card"><RefreshIcon /><span>Verificando o ambiente local...</span></section>;
-  }
-
-  if (!report) {
     return (
-      <section className="settings-panel diagnostic-error-card">
-        <WarningIcon />
-        <div><strong>Não foi possível carregar o diagnóstico.</strong><span>{error}</span></div>
-        <button type="button" className="secondary-action-button" onClick={() => void refresh()}>Tentar novamente</button>
+      <section className="settings-panel diagnostic-loading-card">
+        <RefreshIcon />
+        <span>Verificando SQLCipher, cofre, pastas e continuidade...</span>
       </section>
     );
   }
 
+  if (!suite) {
+    return (
+      <section className="settings-panel diagnostic-error-card">
+        <WarningIcon />
+        <div><strong>Não foi possível carregar o diagnóstico.</strong><span>{error}</span></div>
+        <button type="button" className="secondary-action-button" onClick={() => void loadPreview()}>Tentar novamente</button>
+      </section>
+    );
+  }
+
+  const categoryPassed = (prefix: string) => suite.checks.some(
+    (check) => check.code.startsWith(prefix) && check.status === "passed",
+  );
+
   return (
-    <div className="diagnostics-layout">
-      <section className="settings-panel diagnostics-main-panel">
-        <header className="settings-panel-header diagnostic-panel-header">
+    <div className="diagnostics-v2-layout">
+      <section className="settings-panel diagnostics-command-center">
+        <div className="diagnostics-command-heading">
           <div>
-            <span className="section-eyebrow">Ambiente local</span>
-            <h2>Diagnóstico do FinnacialUX</h2>
-            <p>Consulte a integridade do banco, versões instaladas e caminhos usados pelo aplicativo sem expor informações financeiras.</p>
+            <span className="section-eyebrow">Auditoria local e suporte</span>
+            <h2>Central de diagnóstico</h2>
+            <p>Valide banco, cofre, backups, restauração, rotinas e atualizações sem enviar dados para servidores.</p>
           </div>
-          <div className="diagnostic-header-actions">
-            <button type="button" className="secondary-action-button" onClick={() => void refresh()}><RefreshIcon /> Atualizar</button>
-            <button type="button" className="primary-action-button" onClick={() => void verify()} disabled={checking}><DatabaseIcon /> {checking ? "Verificando..." : "Verificar banco"}</button>
+          <div className="diagnostic-command-actions">
+            <button type="button" className="secondary-action-button" disabled={busy} onClick={() => void loadPreview()}><RefreshIcon /> Atualizar</button>
+            <button type="button" className="primary-action-button" disabled={busy} onClick={() => void runFullAudit()}><FileCheckIcon /> {busy ? "Executando..." : "Auditoria completa"}</button>
           </div>
-        </header>
+        </div>
 
-        <div className={`diagnostic-integrity-card ${report.integrity.ok ? "ok" : "failed"}`}>
-          <span>{report.integrity.ok ? <CheckIcon /> : <WarningIcon />}</span>
+        <div className={`diagnostic-score-card ${health}`}>
+          <div className="diagnostic-score-ring"><strong>{suite.score}</strong><span>/100</span></div>
           <div>
-            <strong>{report.integrity.ok ? "Banco local íntegro" : "Atenção necessária"}</strong>
-            <p>{report.integrity.ok
-              ? "Estrutura, relacionamentos e tabelas essenciais foram validados."
-              : "O banco apresentou inconsistências. Crie um backup e evite novas alterações até revisar a recuperação."}</p>
+            <span>{healthText[health]}</span>
+            <h3>{suite.checksPassed} verificações aprovadas</h3>
+            <p>{suite.checksAttention} precisam de atenção e {suite.checksFailed} falharam.</p>
           </div>
-          <small>Verificado em {formatSettingsDateTime(report.integrity.checkedAt)}</small>
+          <small>{suite.persisted ? `Registrado em ${formatSettingsDateTime(suite.completedAt)}` : "Prévia sem alterar o banco"}</small>
         </div>
 
-        <div className="diagnostic-metrics-grid">
-          <article className={report.databaseEncrypted ? "diagnostic-secure-metric" : "diagnostic-warning-metric"}><span>{report.databaseEncrypted ? <CheckIcon /> : <WarningIcon />}</span><div><small>Banco local</small><strong>{report.databaseEncrypted ? "Criptografado" : "Não confirmado"}</strong><p>{formatFileSize(report.databaseSizeBytes)} · schema {report.integrity.schemaVersion}</p></div></article>
-          <article><span><ArchiveIcon /></span><div><small>Backups registrados</small><strong>{report.backupCount}</strong><p>{report.lastBackupAt ? `Último em ${formatSettingsDateTime(report.lastBackupAt)}` : "Nenhuma cópia criada"}</p></div></article>
-          <article><span><CheckIcon /></span><div><small>Chaves estrangeiras</small><strong>{report.integrity.foreignKeyViolations}</strong><p>{report.integrity.foreignKeyViolations === 0 ? "Sem violações" : "Revisão recomendada"}</p></div></article>
-          <article><span><DatabaseIcon /></span><div><small>Espaço livre</small><strong>{formatFileSize(report.availableDiskBytes)}</strong><p>Na unidade dos dados locais</p></div></article>
+        <div className="diagnostic-capability-grid">
+          <article className={categoryPassed("database.encryption") ? "healthy" : "attention"}><DatabaseIcon /><div><small>SQLCipher</small><strong>{categoryPassed("database.encryption") ? "Confirmado" : "Revisar"}</strong><span>schema 13 e integridade</span></div></article>
+          <article className={categoryPassed("security.stronghold") ? "healthy" : "attention"}><KeyIcon /><div><small>Stronghold</small><strong>{categoryPassed("security.stronghold") ? "Disponível" : "Parcial"}</strong><span>segredos nunca exportados</span></div></article>
+          <article className={categoryPassed("continuity.restore_drill") ? "healthy" : "neutral"}><ArchiveIcon /><div><small>Restauração</small><strong>{categoryPassed("continuity.restore_drill") ? "Ensaio aprovado" : "Ainda não ensaiada"}</strong><span>snapshot temporário</span></div></article>
+          <article className={categoryPassed("updates.channel") ? "healthy" : "attention"}><ShieldIcon /><div><small>Atualizações</small><strong>{categoryPassed("updates.channel") ? "Configuradas" : "Revisar canal"}</strong><span>assinatura e endpoint</span></div></article>
         </div>
 
-        <div className="diagnostic-system-grid">
-          <article><small>Aplicativo</small><strong>{report.appName} {report.appVersion}</strong><span>{report.identifier}</span></article>
-          <article><small>Criptografia do banco</small><strong>{report.databaseCipherVersion || "Indisponível"}</strong><span>Chave {report.databaseKeyFingerprint || "não identificada"}{report.databaseLastKeyRotationAt ? ` · rotacionada em ${formatSettingsDateTime(report.databaseLastKeyRotationAt)}` : ""}</span></article>
-          <article><small>Sistema operacional</small><strong>{report.operatingSystem}</strong><span>Arquitetura {report.architecture}</span></article>
-          <article><small>Inicialização anterior</small><strong>{report.previousUncleanShutdown ? "Encerramento inesperado detectado" : "Encerramento normal"}</strong><span>{report.safeMode ? "Modo seguro ativo" : "Modo normal"}</span></article>
-          <article><small>Tabelas essenciais</small><strong>{report.integrity.requiredTablesPresent ? "Presentes" : "Incompletas"}</strong><span>{report.integrity.integrityMessages.join(", ")}</span></article>
-        </div>
-
-        {report.databaseMigratedFromPlaintext ? (
-          <div className="diagnostic-encryption-note"><CheckIcon /><div><strong>Migração criptografada concluída</strong><span>O banco legado foi convertido para SQLCipher e uma cópia técnica protegida foi criada antes da substituição.</span></div></div>
+        {suite.readOnly ? (
+          <div className="diagnostic-read-only-note"><ShieldIcon /><span>A auditoria permanece disponível, mas histórico e reparos não são gravados no modo somente leitura.</span></div>
         ) : null}
-
         {error ? <div className="diagnostic-inline-error"><WarningIcon /> {error}</div> : null}
       </section>
 
-      <aside className="diagnostics-sidebar">
-        <section className="settings-panel diagnostic-paths-card">
-          <header className="settings-panel-header compact"><div><span className="section-eyebrow">Pastas protegidas</span><h2>Arquivos locais</h2><p>Abra somente os diretórios controlados pelo FinnacialUX.</p></div></header>
-          <div className="diagnostic-path-list">
-            <button type="button" onClick={() => void openDesktopFolder("data")}><DatabaseIcon /><span><strong>Pasta de dados</strong><small>{report.databasePath}</small></span></button>
-            <button type="button" onClick={() => void openDesktopFolder("backups")}><ArchiveIcon /><span><strong>Pasta de backups</strong><small>{report.backupsDirectory}</small></span></button>
-            <button type="button" onClick={() => void openDesktopFolder("logs")}><HistoryIcon /><span><strong>Pasta de logs</strong><small>{report.logsDirectory}</small></span></button>
-          </div>
-        </section>
+      <div className="diagnostics-v2-main-grid">
+        <DiagnosticChecksPanel suite={suite} />
+        <div className="diagnostics-v2-side-stack">
+          <section className="settings-panel diagnostic-support-panel">
+            <header className="settings-panel-header compact">
+              <div><span className="section-eyebrow">Atendimento seguro</span><h2>Pacote de suporte</h2><p>Inclui apenas versões, contagens, verificações e logs sanitizados.</p></div>
+            </header>
+            <div className="diagnostic-privacy-list">
+              <span><CheckIcon /> Sem senhas ou chaves</span>
+              <span><CheckIcon /> Sem saldos ou lançamentos</span>
+              <span><CheckIcon /> SHA-256 verificável</span>
+            </div>
+            <div className="diagnostic-support-actions">
+              <button type="button" className="primary-action-button" disabled={busy} onClick={() => void exportPackage()}><DownloadIcon /> Exportar pacote</button>
+              <button type="button" className="secondary-action-button" disabled={busy} onClick={() => void validatePackage()}><FileCheckIcon /> Validar pacote</button>
+              <button type="button" className="text-action-button" onClick={() => void copySummary()}><CopyIcon /> Copiar resumo</button>
+            </div>
+            {lastPackage ? (
+              <div className="diagnostic-package-result">
+                <strong>{lastPackage.fileName}</strong>
+                <span>{formatFileSize(lastPackage.packageSizeBytes)} · {lastPackage.checksCount} verificações</span>
+                <code>{lastPackage.payloadSha256}</code>
+              </div>
+            ) : null}
+            {validation ? (
+              <div className={`diagnostic-package-validation ${validation.valid ? "valid" : "invalid"}`}>
+                {validation.valid ? <CheckIcon /> : <WarningIcon />}
+                <div><strong>{validation.valid ? "Pacote íntegro" : "Pacote inválido"}</strong><span>{validation.message}</span></div>
+              </div>
+            ) : null}
+          </section>
 
-        <section className="settings-panel diagnostic-export-card">
-          <header className="settings-panel-header compact"><div><span className="section-eyebrow">Suporte</span><h2>Pacote de diagnóstico</h2><p>Exporta versões, integridade e logs sanitizados. Não inclui senhas, saldos ou lançamentos.</p></div></header>
-          <button type="button" className="primary-action-button" onClick={() => void exportPackage()}><DownloadIcon /> Exportar diagnóstico</button>
-        </section>
+          <DiagnosticRepairsPanel
+            actions={availableRepairs}
+            records={repairs}
+            readOnly={suite.readOnly}
+            busy={busy}
+            onRepair={(action) => void runRepair(action)}
+          />
+        </div>
+      </div>
 
-        <section className="settings-panel migration-history-card">
-          <header className="settings-panel-header compact"><div><span className="section-eyebrow">Banco local</span><h2>Histórico de schema</h2></div></header>
-          <div className="migration-history-list">
-            {report.migrations.map((migration) => (
-              <article key={migration.version}>
-                <span>v{migration.version}</span>
-                <div><strong>{migration.description}</strong><small>{formatSettingsDateTime(migration.appliedAt)}</small></div>
-              </article>
-            ))}
-          </div>
-        </section>
-      </aside>
+      <DiagnosticHistoryPanel runs={runs} />
     </div>
   );
 }

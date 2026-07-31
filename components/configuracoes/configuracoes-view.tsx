@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
+import { PerformancePanel } from "@/components/configuracoes/performance-panel";
+import { BackgroundTasksPanel } from "@/components/configuracoes/background-tasks-panel";
 import { ContinuityPanel } from "@/components/configuracoes/continuity-panel";
 import { DesktopExperiencePanel } from "@/components/configuracoes/desktop-experience-panel";
 import { AccessibilityPanel } from "@/components/configuracoes/accessibility-panel";
@@ -171,6 +173,8 @@ export default function ConfiguracoesView() {
       backups: "backups",
       continuity: "continuidade",
       diagnostics: "diagnostico",
+      performance: "desempenho",
+      background: "rotinas",
       desktop: "desktop",
       accessibility: "acessibilidade",
       updates: "atualizacoes",
@@ -187,6 +191,8 @@ export default function ConfiguracoesView() {
       else if (hash === "#acessibilidade") setView("accessibility");
       else if (hash === "#continuidade") setView("continuity");
       else if (hash === "#diagnostico") setView("diagnostics");
+      else if (hash === "#desempenho") setView("performance");
+      else if (hash === "#rotinas") setView("background");
       else if (hash === "#seguranca") setView("security");
       else if (hash === "#backups") setView("backups");
     };
@@ -529,7 +535,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "continuity", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -586,6 +592,8 @@ export default function ConfiguracoesView() {
       ) : null}
       {view === "continuity" ? <ContinuityPanel onFeedback={showFeedback} onConfirmRestore={() => desktopSecurity.confirmSensitiveAction("restore")} /> : null}
       {view === "diagnostics" ? <DiagnosticsPanel onFeedback={showFeedback} /> : null}
+      {view === "performance" ? <PerformancePanel onFeedback={showFeedback} /> : null}
+      {view === "background" ? <BackgroundTasksPanel onFeedback={showFeedback} /> : null}
       {view === "desktop" ? <DesktopExperiencePanel /> : null}
       {view === "accessibility" ? <AccessibilityPanel /> : null}
       {view === "updates" ? (

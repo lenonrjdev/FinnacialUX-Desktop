@@ -1,0 +1,34 @@
+FINNACIALUX DESKTOP — FASE 14 — ARQUIVOS INCREMENTAIS
+
+Versão: 0.14.0
+Schema SQLCipher: 11
+Total: 28 arquivos novos ou modificados
+
+15_APLICAR_FASE_14.cmd
+15_VALIDAR_FASE_14.cmd
+FASE_14_ARQUIVOS.txt
+FASE_14_DESKTOP_DESEMPENHO_GRANDES_VOLUMES.md
+README.md
+app/globals.css
+components/configuracoes/configuracoes-view.tsx
+components/configuracoes/performance-panel.tsx
+components/configuracoes/settings-navigation.tsx
+content/configuracoes.ts
+docs/DESEMPENHO_GRANDES_VOLUMES.md
+lib/desktop/performance.ts
+lib/desktop/reconciliation.ts
+lib/performance-engine.ts
+release/RELEASE_NOTES_0_14_0.md
+scripts/15_APLICAR_FASE_14.ps1
+scripts/15_FINALIZAR_FASE_14.mjs
+scripts/15_VALIDAR_FASE_14.ps1
+src-tauri/migrations/0011_large_volume_performance.sql
+src-tauri/src/encrypted_database.rs
+src-tauri/src/lib.rs
+src-tauri/src/performance.rs
+src-tauri/src/protection.rs
+src-tauri/src/reconciliation.rs
+tests/unit/performance-engine.test.ts
+types/configuracoes.ts
+types/performance.ts
+types/reconciliation.ts

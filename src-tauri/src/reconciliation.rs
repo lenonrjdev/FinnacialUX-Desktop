@@ -1,6 +1,10 @@
 use crate::{
     command_worker::run_local_async_worker,
     encrypted_database::{connect_app_database, EncryptedDatabaseState},
+    performance::{
+        begin_operation, emit_operation_progress, finish_operation, operation_cancelled,
+        update_operation_progress,
+    },
 };
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -767,6 +771,8 @@ pub struct ApplyImportRequest {
     pub source_checksum: String,
     pub preview_checksum: String,
     pub decisions: Vec<ReconciliationDecision>,
+    pub operation_id: Option<String>,
+    pub batch_size: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1005,8 +1011,54 @@ pub fn reconciliation_apply_import(
         let mut duplicate_count = 0i64;
         let mut entry_rows = Vec::<(String, StatementEntryInput, String, Option<String>, Option<i64>, String)>::new();
         let mut match_rows = Vec::<(String, String, Option<String>, String, Option<i64>, Value)>::new();
+        let operation_id = request
+            .operation_id
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| format!("reconciliation-import-{}", Uuid::new_v4()));
+        let batch_size = request.batch_size.unwrap_or(500).clamp(100, 2_000) as usize;
+        let operation_total = request.entries.len() as i64;
+        begin_operation(
+            &mut connection,
+            &operation_id,
+            &request.workspace_id,
+            "reconciliation_import",
+            operation_total,
+            &json!({ "fileName": request.file_name.clone(), "batchSize": batch_size }),
+        )
+        .await?;
+        emit_operation_progress(
+            &app,
+            &operation_id,
+            "reconciliation_import",
+            "running",
+            0,
+            operation_total,
+            "Preparando a importação em lotes.",
+        );
 
-        for entry in &request.entries {
+        for (entry_index, entry) in request.entries.iter().enumerate() {
+            if entry_index % batch_size == 0 && operation_cancelled(&mut connection, &operation_id).await? {
+                finish_operation(
+                    &mut connection,
+                    &operation_id,
+                    "cancelled",
+                    entry_index as i64,
+                    None,
+                )
+                .await?;
+                emit_operation_progress(
+                    &app,
+                    &operation_id,
+                    "reconciliation_import",
+                    "cancelled",
+                    entry_index as i64,
+                    operation_total,
+                    "Importação cancelada antes de alterar os dados.",
+                );
+                connection.close().await.map_err(to_error)?;
+                return Err("A importação foi cancelada com segurança antes da gravação.".to_string());
+            }
             let decision = decisions.get(&entry.id).ok_or_else(|| "Decisão de conciliação ausente.".to_string())?;
             let preview_entry = previews.get(&entry.id).ok_or_else(|| "Item não pertence mais à prévia atual.".to_string())?;
             let entry_row_id = format!("statement-entry-{}", Uuid::new_v4());
@@ -1103,6 +1155,19 @@ pub fn reconciliation_apply_import(
                 match_score,
                 decision.note.clone().unwrap_or_default(),
             ));
+            let processed = (entry_index + 1) as i64;
+            if processed == operation_total || processed % batch_size as i64 == 0 {
+                update_operation_progress(&mut connection, &operation_id, processed).await?;
+                emit_operation_progress(
+                    &app,
+                    &operation_id,
+                    "reconciliation_import",
+                    "running",
+                    processed,
+                    operation_total,
+                    format!("{processed} de {operation_total} itens preparados."),
+                );
+            }
         }
 
         let next_transactions = Value::Array(transactions);
@@ -1206,6 +1271,23 @@ pub fn reconciliation_apply_import(
             .await
             .map_err(to_error)?;
         transaction.commit().await.map_err(to_error)?;
+        finish_operation(
+            &mut connection,
+            &operation_id,
+            "completed",
+            operation_total,
+            None,
+        )
+        .await?;
+        emit_operation_progress(
+            &app,
+            &operation_id,
+            "reconciliation_import",
+            "completed",
+            operation_total,
+            operation_total,
+            "Extrato aplicado em lote com sucesso.",
+        );
         let row = sqlx::query("SELECT * FROM bank_statement_imports WHERE id = $1")
             .bind(&import_id)
             .fetch_one(&mut connection)
