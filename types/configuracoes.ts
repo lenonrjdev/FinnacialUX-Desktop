@@ -14,7 +14,8 @@ export type SettingsView =
   | "onboarding"
   | "updates"
   | "maintenance"
-  | "backupAutomation";
+  | "backupAutomation"
+  | "recoveryReadiness";
 
 export type AppearanceMode = "light" | "dark" | "system";
 export type DateFormat = "dd/MM/yyyy" | "MM/dd/yyyy" | "yyyy-MM-dd";

@@ -326,4 +326,9 @@ A Fase 20 adiciona janela de manutenção, adiamento controlado de atualizaçõe
 
 ## Fase 21 — Backup automático e continuidade
 
-A versão 1.2.0 conecta o motor nativo de backups ao ciclo do Desktop, com verificações em inicialização, foco e intervalo configurável, retenção, histórico local sanitizado e restauração assistida. O schema SQLCipher permanece congelado em 14.
+A versão 1.3.0 conecta o motor nativo de backups ao ciclo do Desktop, com verificações em inicialização, foco e intervalo configurável, retenção, histórico local sanitizado e restauração assistida. O schema SQLCipher permanece congelado em 14.
+
+
+## Recuperação comprovada 1.3.0
+
+Configurações → Teste de recuperação abre e valida a cópia mais recente sem substituir o banco atual, mede RPO/RTO e apresenta um plano de desastre local.

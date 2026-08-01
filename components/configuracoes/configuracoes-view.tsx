@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { BackupAutomationPanel } from "@/components/configuracoes/backup-automation-panel";
+import { RecoveryReadinessPanel } from "@/components/configuracoes/recovery-readiness-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
 import { PerformancePanel } from "@/components/configuracoes/performance-panel";
 import { BackgroundTasksPanel } from "@/components/configuracoes/background-tasks-panel";
@@ -176,6 +177,7 @@ export default function ConfiguracoesView() {
       security: "seguranca",
       backups: "backups",
       backupAutomation: "backup-automatico",
+      recoveryReadiness: "teste-recuperacao",
       continuity: "continuidade",
       diagnostics: "diagnostico",
       performance: "desempenho",
@@ -205,6 +207,7 @@ export default function ConfiguracoesView() {
       else if (hash === "#seguranca") setView("security");
       else if (hash === "#backups") setView("backups");
       else if (hash === "#backup-automatico") setView("backupAutomation");
+      else if (hash === "#teste-recuperacao") setView("recoveryReadiness");
     };
     syncViewFromHash();
     window.addEventListener("hashchange", syncViewFromHash);
@@ -582,6 +585,7 @@ export default function ConfiguracoesView() {
       ) : null}
       {view === "activity" ? <ActivityPanel entries={activityEntries} /> : null}
       {view === "backupAutomation" ? <BackupAutomationPanel onFeedback={showFeedback} /> : null}
+      {view === "recoveryReadiness" ? <RecoveryReadinessPanel onFeedback={showFeedback} /> : null}
       {view === "backups" ? (
         <BackupsPanel
           settings={backupSettings}

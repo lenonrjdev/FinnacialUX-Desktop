@@ -9,7 +9,7 @@ import {
 } from "@/lib/release-candidate";
 
 const readySnapshot = {
-  version: "1.2.0",
+  version: "1.3.0",
   schemaVersion: 14,
   updaterConfigured: true,
   developmentBuild: false,
@@ -19,16 +19,16 @@ const readySnapshot = {
 
 const stableConfig = {
   ...stableReleaseConfig,
-  version: "1.2.0",
-  promotedFrom: "1.1.0",
+  version: "1.3.0",
+  promotedFrom: "1.2.0",
 };
 
 describe("stable release", () => {
   it("interpreta versão estável e candidata", () => {
-    expect(parseDesktopVersion("1.2.0")).toEqual({
+    expect(parseDesktopVersion("1.3.0")).toEqual({
       valid: true,
       major: 1,
-      minor: 2,
+      minor: 3,
       patch: 0,
       prerelease: null,
     });
@@ -37,13 +37,13 @@ describe("stable release", () => {
 
   it("distingue desenvolvimento, candidato e estável", () => {
     expect(releaseChannel("0.18.0-rc.1")).toBe("release-candidate");
-    expect(releaseChannel("1.2.0")).toBe("stable");
-    expect(releaseChannel("1.2.0", true)).toBe("development");
+    expect(releaseChannel("1.3.0")).toBe("stable");
+    expect(releaseChannel("1.3.0", true)).toBe("development");
   });
 
-  it("gera nomes determinísticos da versão 1.2", () => {
-    expect(releaseTag("1.2.0")).toBe("desktop-v1.2.0");
-    expect(releaseAssetName("1.2.0")).toBe("FinnacialUX-Desktop_1.2.0_x64-setup.exe");
+  it("gera nomes determinísticos da versão 1.3", () => {
+    expect(releaseTag("1.3.0")).toBe("desktop-v1.3.0");
+    expect(releaseAssetName("1.3.0")).toBe("FinnacialUX-Desktop_1.3.0_x64-setup.exe");
   });
 
   it("aprova a versão estável com schema congelado e proteções ativas", () => {
@@ -51,7 +51,7 @@ describe("stable release", () => {
     expect(report.ready).toBe(true);
     expect(report.blocked).toBe(0);
     expect(report.channel).toBe("stable");
-    expect(report.promotedFrom).toBe("1.1.0");
+    expect(report.promotedFrom).toBe("1.2.0");
   });
 
   it("bloqueia divergência de schema", () => {

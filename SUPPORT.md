@@ -2,7 +2,7 @@
 
 ## Versões atendidas
 
-A versão estável atual recebe correções de segurança, integridade de dados e regressões bloqueadoras. A série estável `1.x` é o canal suportado. A versão `1.2.0` recebe correções de segurança, integridade de dados e regressões bloqueadoras; a `1.1.0` permanece como base de atualização imediatamente anterior.
+A versão estável atual recebe correções de segurança, integridade de dados e regressões bloqueadoras. A série estável `1.x` é o canal suportado. A versão `1.3.0` recebe correções de segurança, integridade de dados e regressões bloqueadoras; a `1.2.0` permanece como base de atualização imediatamente anterior.
 
 ## Antes de solicitar suporte
 
@@ -35,3 +35,8 @@ Não envie:
 ## Ciclo de correções
 
 Correções são publicadas com versionamento semântico. Atualizações que envolvam o banco devem preservar compatibilidade, possuir teste de upgrade e manter backup pré-atualização.
+
+
+## Ensaio de recuperação
+
+Antes de solicitar suporte sobre restauração, execute Configurações → Teste de recuperação. Compartilhe somente o resultado sanitizado; nunca envie a chave do Stronghold, senha ou arquivo de backup por canais não autorizados.

@@ -23,6 +23,7 @@ export const settingsContent = {
     updates: "Atualizações",
     maintenance: "Manutenção",
     backupAutomation: "Backup automático",
+    recoveryReadiness: "Teste de recuperação",
   },
   summary: {
     account: "Conta principal",

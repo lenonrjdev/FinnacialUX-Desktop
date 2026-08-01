@@ -171,6 +171,7 @@ export function BackupAutomationPanel({ onFeedback }: { onFeedback: (message: st
       <div className="backup-automation-actions">
         <button className="primary-action-button" type="button" onClick={() => { window.location.hash = "backups"; }}><ArchiveIcon /> Abrir política e restauração</button>
         <button className="secondary-action-button" type="button" onClick={() => void refresh()}><RefreshIcon /> Atualizar estado</button>
+        <button className="text-action-button" type="button" onClick={() => { window.location.hash = "teste-recuperacao"; }}><ShieldIcon /> Testar recuperação</button>
         <button className="text-action-button" type="button" onClick={clearHistory}><TrashIcon /> Limpar histórico</button>
       </div>
 

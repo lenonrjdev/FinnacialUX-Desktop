@@ -69,7 +69,7 @@ export function MaintenancePanel({ onFeedback }: { onFeedback: (message: string)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
       setSnapshot({
-        currentVersion: "1.2.0",
+        currentVersion: "1.3.0",
         schemaVersion: 14,
         updaterConfigured: false,
         backupBeforeInstall: true,
