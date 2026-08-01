@@ -1,0 +1,4 @@
+scripts/stable-release.mjs
+scripts/22_VALIDAR_FASE_21.ps1
+HOTFIX_21_0_1_RELATORIO_UTF8_BOM.md
+HOTFIX_21_0_1_ARQUIVOS.txt

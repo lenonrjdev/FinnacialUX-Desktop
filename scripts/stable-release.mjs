@@ -15,7 +15,10 @@ function sha256File(filePath) {
 }
 
 async function exists(filePath) { try { await access(filePath); return true; } catch { return false; } }
-async function readJson(filePath) { return JSON.parse(await readFile(filePath, "utf8")); }
+async function readJson(filePath) {
+  const text = await readFile(filePath, "utf8");
+  return JSON.parse(text.replace(/^\uFEFF/, ""));
+}
 function cargoVersion(text) { return text.match(/^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"/m)?.[1] ?? ""; }
 function cargoDependencies(text) {
   const section = text.match(/^\[dependencies\]\s*([\s\S]*?)(?=^\[|\s*$)/m)?.[1] ?? "";
@@ -56,7 +59,7 @@ async function verifySource(root) {
   return { config, freeze, pkg, tauri, cargoText, expectedVersion, expectedSchema, promotedFrom };
 }
 
-async function verifyPromotionEvidence(root, directoryArg, suppliedSource) {
+async function inspectPromotionEvidence(root, directoryArg, suppliedSource, required = false) {
   const source = suppliedSource ?? await verifySource(root);
   const directory = path.resolve(root, directoryArg ?? path.join("releases", source.promotedFrom));
   const fromCandidate = source.promotedFrom.includes("-rc.");
@@ -65,16 +68,59 @@ async function verifyPromotionEvidence(root, directoryArg, suppliedSource) {
   const manifestPath = path.join(directory, "release-manifest.json");
   const validation = await readJson(validationPath).catch(() => null);
   const manifest = await readJson(manifestPath).catch(() => null);
-  if (!validation || validation.version !== source.promotedFrom || validation.schemaVersion !== source.expectedSchema) {
-    throw new Error(`Relatório de validação da versão anterior ausente ou incompatível: ${validationName}`);
-  }
   const expectedStatus = fromCandidate ? "approved-for-prerelease" : "approved-for-stable";
-  if (validation.manualMatrixComplete !== true || validation.status !== expectedStatus) throw new Error("A versão de origem ainda não possui homologação manual completa.");
   const expectedChannel = fromCandidate ? "release-candidate" : "stable";
-  if (!manifest || manifest.version !== source.promotedFrom || manifest.channel !== expectedChannel || Boolean(manifest.prerelease) !== fromCandidate) {
-    throw new Error("Manifesto da versão de origem ausente ou inválido.");
+
+  const validationCompatible = Boolean(
+    validation
+    && validation.version === source.promotedFrom
+    && validation.schemaVersion === source.expectedSchema
+    && validation.manualMatrixComplete === true
+    && validation.latestChannelConfirmed === true
+    && /^[a-f0-9]{64}$/i.test(String(validation.installerSha256 ?? ""))
+    && validation.status === expectedStatus,
+  );
+  const manifestCompatible = Boolean(
+    manifest
+    && manifest.version === source.promotedFrom
+    && manifest.channel === expectedChannel
+    && Boolean(manifest.prerelease) === fromCandidate,
+  );
+
+  if (!validationCompatible || !manifestCompatible) {
+    if (required) {
+      if (!validationCompatible) {
+        throw new Error(`Relatório de validação da versão anterior ausente ou incompatível: ${validationName}`);
+      }
+      throw new Error("Manifesto da versão de origem ausente ou inválido.");
+    }
+    return {
+      available: false,
+      required: false,
+      directory,
+      validationName,
+      sourceVersion: source.promotedFrom,
+      reason: !validationCompatible
+        ? `Evidência ${validationName} ausente ou incompatível.`
+        : "Manifesto da versão de origem ausente ou incompatível.",
+    };
   }
-  return { directory, validation, manifest, validationName, validationSha256: await sha256File(validationPath), manifestSha256: await sha256File(manifestPath) };
+
+  return {
+    available: true,
+    required,
+    directory,
+    validation,
+    manifest,
+    validationName,
+    sourceVersion: source.promotedFrom,
+    validationSha256: await sha256File(validationPath),
+    manifestSha256: await sha256File(manifestPath),
+  };
+}
+
+async function verifyPromotionEvidence(root, directoryArg, suppliedSource) {
+  return inspectPromotionEvidence(root, directoryArg, suppliedSource, true);
 }
 
 async function createInventory(source) {
@@ -85,20 +131,58 @@ async function createInventory(source) {
 
 async function prepareStableManifest(root, promotionDirectoryArg) {
   const source = await verifySource(root);
-  const evidence = await verifyPromotionEvidence(root, promotionDirectoryArg, source);
+  const evidenceRequired = source.config.previousReleaseEvidenceRequired === true;
+  const evidence = await inspectPromotionEvidence(root, promotionDirectoryArg, source, evidenceRequired);
   const output = path.join(root, "releases", source.expectedVersion);
   await mkdir(output, { recursive: true });
   const criticalFiles = ["package.json", "package-lock.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "src-tauri/tauri.conf.json", "release/schema-freeze-14.json", "release/stable-release.json"];
   const hashes = [];
   for (const relative of criticalFiles) { const filePath = path.join(root, relative); if (await exists(filePath)) hashes.push({ file: relative.replaceAll("\\", "/"), sha256: await sha256File(filePath) }); }
   for (const migration of source.freeze.migrations) hashes.push({ file: `src-tauri/migrations/${migration.file}`, sha256: migration.sha256 });
-  const buildManifest = { formatVersion: 2, product: source.config.product, version: source.expectedVersion, channel: "stable", schemaVersion: source.expectedSchema, schemaFrozen: true, tag: source.config.tag, target: source.config.target, promotedFrom: source.promotedFrom, promotedFromTag: source.config.promotedFromTag, generatedAt: new Date().toISOString(), promotionEvidence: { validationFile: evidence.validationName, validationReportSha256: evidence.validationSha256, releaseManifestSha256: evidence.manifestSha256, manualMatrixComplete: true }, sourceHashes: hashes };
+  const releaseMode = evidence.available ? "stable-update" : "bootstrap-full-installer";
+  const promotionEvidence = evidence.available
+    ? {
+        available: true,
+        required: evidenceRequired,
+        validationFile: evidence.validationName,
+        validationReportSha256: evidence.validationSha256,
+        releaseManifestSha256: evidence.manifestSha256,
+        manualMatrixComplete: true,
+      }
+    : {
+        available: false,
+        required: evidenceRequired,
+        sourceVersion: source.promotedFrom,
+        reason: evidence.reason,
+        note: "Nenhuma homologação anterior foi inventada. A versão atual será gerada como instalador estável completo.",
+      };
+  const buildManifest = {
+    formatVersion: 3,
+    product: source.config.product,
+    version: source.expectedVersion,
+    channel: "stable",
+    schemaVersion: source.expectedSchema,
+    schemaFrozen: true,
+    tag: source.config.tag,
+    target: source.config.target,
+    promotedFrom: source.promotedFrom,
+    promotedFromTag: source.config.promotedFromTag,
+    releaseMode,
+    upgradeBaselineVerified: evidence.available,
+    generatedAt: new Date().toISOString(),
+    promotionEvidence,
+    sourceHashes: hashes,
+  };
   await writeFile(path.join(output, "STABLE_BUILD_MANIFEST.json"), `${JSON.stringify(buildManifest, null, 2)}\n`, "utf8");
   await writeFile(path.join(output, "DEPENDENCY_INVENTORY.json"), `${JSON.stringify(await createInventory(source), null, 2)}\n`, "utf8");
   const checklistName = `STABLE_CHECKLIST_${source.expectedVersion.replaceAll(".", "_")}.md`;
   const checklistPath = path.join(root, "release", checklistName);
   if (await exists(checklistPath)) await copyFile(checklistPath, path.join(output, "STABLE_CHECKLIST.md"));
   for (const document of ["PRIVACY.md", "SECURITY.md", "SUPPORT.md"]) if (await exists(path.join(root, document))) await copyFile(path.join(root, document), path.join(output, document));
+  if (!evidence.available) {
+    console.warn(`Versão anterior sem evidência homologada em ${evidence.directory}.`);
+    console.warn("A versão atual será preparada como primeiro instalador estável completo, sem declarar upgrade 1.0.0 como validado.");
+  }
   return output;
 }
 
@@ -108,6 +192,16 @@ async function verifyStableArtifacts(root, releaseDirectoryArg) {
   const installerName = `FinnacialUX-Desktop_${source.expectedVersion}_x64-setup.exe`;
   const required = source.config.requiredArtifacts.filter((name) => name !== "STABLE_VALIDATION_REPORT.json");
   for (const name of required) { const info = await stat(path.join(directory, name)).catch(() => null); if (!info?.isFile() || info.size <= 0) throw new Error(`Artefato obrigatório ausente ou vazio: ${name}`); }
+  const buildManifest = await readJson(path.join(directory, "STABLE_BUILD_MANIFEST.json"));
+  if (buildManifest.version !== source.expectedVersion || buildManifest.schemaVersion !== source.expectedSchema || buildManifest.channel !== "stable") {
+    throw new Error("STABLE_BUILD_MANIFEST.json não corresponde à versão atual.");
+  }
+  if (source.config.previousReleaseEvidenceRequired === true && buildManifest.promotionEvidence?.available !== true) {
+    throw new Error("A configuração exige uma release anterior homologada, mas a evidência não está disponível.");
+  }
+  if (!["stable-update", "bootstrap-full-installer"].includes(buildManifest.releaseMode)) {
+    throw new Error("Modo de release estável desconhecido.");
+  }
   const installerHash = await sha256File(path.join(directory, installerName));
   const sums = await readFile(path.join(directory, "SHA256SUMS.txt"), "utf8");
   if (!sums.includes(`${installerHash}  ${installerName}`)) throw new Error("SHA256SUMS.txt não corresponde ao instalador estável.");
@@ -132,6 +226,13 @@ async function main() {
   const root = path.resolve(rootArg);
   if (command === "verify-source") { const source = await verifySource(root); console.log(`Release estável ${source.expectedVersion}: fonte validada, schema ${source.expectedSchema} congelado.`); return; }
   if (command === "verify-promotion" || command === "verify-rc") { const source = await verifySource(root); const result = await verifyPromotionEvidence(root, directoryArg, source); console.log(`Versão de origem homologada: ${result.directory}`); return; }
+  if (command === "inspect-promotion") {
+    const source = await verifySource(root);
+    const result = await inspectPromotionEvidence(root, directoryArg, source, false);
+    if (result.available) console.log(`Versão de origem homologada: ${result.directory}`);
+    else console.log(`Sem evidência anterior homologada. Modo bootstrap permitido para ${source.expectedVersion}.`);
+    return;
+  }
   if (command === "prepare") { const output = await prepareStableManifest(root, directoryArg); console.log(`Manifestos da release estável preparados em: ${output}`); return; }
   if (command === "verify-artifacts") { const output = await verifyStableArtifacts(root, directoryArg); console.log(`Artefatos da release estável validados em: ${output}`); return; }
   throw new Error(`Comando desconhecido: ${command}`);

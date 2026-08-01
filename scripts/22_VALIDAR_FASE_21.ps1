@@ -25,6 +25,43 @@ if ($layout -notmatch [regex]::Escape("BackupAutomationProvider")) { throw "O ex
 $migrations = @(Get-ChildItem (Join-Path $Root "src-tauri\migrations") -Filter "*.sql" | Sort-Object Name)
 if ($migrations.Count -ne 14 -or ($migrations | Where-Object { [int]$_.BaseName.Substring(0, 4) -gt 14 })) { throw "O schema 14 deixou de estar congelado." }
 if (Get-ChildItem (Join-Path $Root "src-tauri\migrations") -Filter "0015_*.sql" -ErrorAction SilentlyContinue) { throw "A Fase 21 não permite migration 0015." }
+
+Write-Host ""; Write-Host "==> Validando relatório homologado UTF-8 com BOM" -ForegroundColor Cyan
+$fixture = Join-Path ([System.IO.Path]::GetTempPath()) ("finnacialux-phase21-bom-" + [guid]::NewGuid().ToString("N"))
+try {
+  New-Item -ItemType Directory -Path $fixture -Force | Out-Null
+  $validationFixture = [ordered]@{
+    formatVersion = 3
+    product = "FinnacialUX Desktop"
+    version = "1.1.0"
+    schemaVersion = 14
+    promotedFrom = "1.0.0"
+    releaseMode = "bootstrap-full-installer"
+    previousReleaseEvidenceAvailable = $false
+    recordedAt = (Get-Date).ToUniversalTime().ToString("o")
+    installerSha256 = ("a" * 64)
+    manualMatrixComplete = $true
+    latestChannelConfirmed = $true
+    status = "approved-for-stable"
+  }
+  $manifestFixture = [ordered]@{
+    product = "FinnacialUX Desktop"
+    version = "1.1.0"
+    channel = "stable"
+    prerelease = $false
+    schemaVersion = 14
+    tag = "desktop-v1.1.0"
+  }
+  $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+  [System.IO.File]::WriteAllText((Join-Path $fixture "STABLE_VALIDATION_REPORT.json"), (($validationFixture | ConvertTo-Json -Depth 6) + "`n"), $utf8Bom)
+  [System.IO.File]::WriteAllText((Join-Path $fixture "release-manifest.json"), (($manifestFixture | ConvertTo-Json -Depth 4) + "`n"), $utf8Bom)
+  node scripts\stable-release.mjs verify-promotion $Root $fixture
+  if ($LASTEXITCODE -ne 0) { throw "O leitor de evidência não aceita JSON UTF-8 com BOM gerado pelo Windows PowerShell." }
+}
+finally {
+  Remove-Item $fixture -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Write-Host ""; Write-Host "FASE 21 VALIDADA COM SUCESSO" -ForegroundColor Green
 Write-Host "Schema: 14 (congelado)"
 Write-Host "Versão: 1.2.0"
