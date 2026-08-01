@@ -12,6 +12,7 @@ mod performance;
 mod background_tasks;
 mod diagnostics;
 mod onboarding;
+mod external_backup;
 
 use background_tasks::BackgroundSchedulerState;
 use encrypted_database::EncryptedDatabaseState;
@@ -152,6 +153,12 @@ pub fn run() {
             protection::open_app_folder,
             protection::get_recovery_status,
             protection::acknowledge_recovery,
+            external_backup::external_backup_get_preferences,
+            external_backup::external_backup_save_preferences,
+            external_backup::external_backup_get_destination_status,
+            external_backup::external_backup_mirror,
+            external_backup::external_backup_verify,
+            external_backup::external_backup_open_destination,
             security::create_argon2_credential,
             security::verify_user_password,
             security::change_account_password,

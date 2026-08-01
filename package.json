@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestão financeira offline-first com recuperação comprovada, SQLCipher, Stronghold e backups automáticos.",
+  "description": "FinnacialUX Desktop — gestão financeira offline-first com backup externo criptografado, SQLCipher e Stronghold.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

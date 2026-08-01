@@ -21,6 +21,7 @@ const navigation: Array<{ key: SettingsView; icon: React.ReactNode }> = [
   { key: "activity", icon: <HistoryIcon /> },
   { key: "backups", icon: <ArchiveIcon /> },
   { key: "backupAutomation", icon: <RefreshIcon /> },
+  { key: "externalBackup", icon: <ArchiveIcon /> },
   { key: "recoveryReadiness", icon: <ShieldIcon /> },
   { key: "continuity", icon: <ShieldIcon /> },
   { key: "diagnostics", icon: <DatabaseIcon /> },

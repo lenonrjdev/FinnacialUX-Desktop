@@ -15,6 +15,7 @@ export type SettingsView =
   | "updates"
   | "maintenance"
   | "backupAutomation"
+  | "externalBackup"
   | "recoveryReadiness";
 
 export type AppearanceMode = "light" | "dark" | "system";

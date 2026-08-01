@@ -5,6 +5,7 @@ import { ActivityPanel } from "@/components/configuracoes/activity-panel";
 import { BackupsPanel, type CreateBackupOptions } from "@/components/configuracoes/backups-panel";
 import { BackupAutomationPanel } from "@/components/configuracoes/backup-automation-panel";
 import { RecoveryReadinessPanel } from "@/components/configuracoes/recovery-readiness-panel";
+import { ExternalBackupPanel } from "@/components/configuracoes/external-backup-panel";
 import { DiagnosticsPanel } from "@/components/configuracoes/diagnostics-panel";
 import { PerformancePanel } from "@/components/configuracoes/performance-panel";
 import { BackgroundTasksPanel } from "@/components/configuracoes/background-tasks-panel";
@@ -177,6 +178,7 @@ export default function ConfiguracoesView() {
       security: "seguranca",
       backups: "backups",
       backupAutomation: "backup-automatico",
+      externalBackup: "backup-externo",
       recoveryReadiness: "teste-recuperacao",
       continuity: "continuidade",
       diagnostics: "diagnostico",
@@ -207,6 +209,7 @@ export default function ConfiguracoesView() {
       else if (hash === "#seguranca") setView("security");
       else if (hash === "#backups") setView("backups");
       else if (hash === "#backup-automatico") setView("backupAutomation");
+      else if (hash === "#backup-externo") setView("externalBackup");
       else if (hash === "#teste-recuperacao") setView("recoveryReadiness");
     };
     syncViewFromHash();
@@ -548,7 +551,7 @@ export default function ConfiguracoesView() {
 
   return (
     <div className="financial-management-page settings-page">
-      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "maintenance", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility", "onboarding", "backupAutomation"] as SettingsView[]).includes(view)} />
+      <SettingsHeading onSave={() => void saveCurrentView()} saving={saving} showSave={!(["updates", "maintenance", "diagnostics", "performance", "background", "continuity", "activity", "desktop", "accessibility", "onboarding", "backupAutomation", "externalBackup"] as SettingsView[]).includes(view)} />
       <SettingsSummary
         profileName={profile.name}
         profileEmail={profile.email}
@@ -585,6 +588,7 @@ export default function ConfiguracoesView() {
       ) : null}
       {view === "activity" ? <ActivityPanel entries={activityEntries} /> : null}
       {view === "backupAutomation" ? <BackupAutomationPanel onFeedback={showFeedback} /> : null}
+      {view === "externalBackup" ? <ExternalBackupPanel onFeedback={showFeedback} /> : null}
       {view === "recoveryReadiness" ? <RecoveryReadinessPanel onFeedback={showFeedback} /> : null}
       {view === "backups" ? (
         <BackupsPanel

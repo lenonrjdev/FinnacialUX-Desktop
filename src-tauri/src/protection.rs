@@ -555,6 +555,11 @@ fn read_backup_header_internal(path: &Path) -> Result<(BackupManifest, Vec<u8>),
     Ok((manifest, payload))
 }
 
+pub(crate) fn backup_package_encryption_mode(path: &Path) -> Result<String, String> {
+    let (manifest, _) = read_backup_header_internal(path)?;
+    Ok(manifest.encryption_mode)
+}
+
 fn read_backup_package(
     path: &Path,
     credential: Option<&str>,

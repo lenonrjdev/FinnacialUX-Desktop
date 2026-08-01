@@ -332,3 +332,8 @@ A versão 1.3.0 conecta o motor nativo de backups ao ciclo do Desktop, com verif
 ## Recuperação comprovada 1.3.0
 
 Configurações → Teste de recuperação abre e valida a cópia mais recente sem substituir o banco atual, mede RPO/RTO e apresenta um plano de desastre local.
+
+
+## Versão 1.4.0 — backup externo criptografado
+
+A Fase 23 adiciona redundância real em outro volume ou pasta sincronizada. Somente pacotes `.fuxbackup` já criptografados são copiados; cada arquivo recebe SHA-256, sidecar independente, escrita atômica e retenção segura. A chave do Stronghold nunca sai do dispositivo.

@@ -40,3 +40,8 @@ Correções são publicadas com versionamento semântico. Atualizações que env
 ## Ensaio de recuperação
 
 Antes de solicitar suporte sobre restauração, execute Configurações → Teste de recuperação. Compartilhe somente o resultado sanitizado; nunca envie a chave do Stronghold, senha ou arquivo de backup por canais não autorizados.
+
+
+## Backup externo
+
+Em chamados sobre redundância externa, informe apenas o tipo de destino, disponibilidade e resultado do checksum. Não envie a chave do Stronghold, senhas ou conteúdo dos pacotes. Uma cópia no mesmo volume não substitui mídia externa ou pasta sincronizada.
