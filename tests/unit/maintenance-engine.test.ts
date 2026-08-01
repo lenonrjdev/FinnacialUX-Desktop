@@ -9,7 +9,7 @@ import {
 } from "@/lib/maintenance-engine";
 
 const snapshot = {
-  currentVersion: "1.1.0",
+  currentVersion: "1.2.0",
   schemaVersion: 14,
   updaterConfigured: true,
   backupBeforeInstall: true,
@@ -21,7 +21,7 @@ const snapshot = {
 };
 
 describe("maintenance engine", () => {
-  it("aprova uma base 1.1.0 protegida e sem alterar o schema", () => {
+  it("aprova uma base 1.2.0 protegida e sem alterar o schema", () => {
     const report = createMaintenanceReport(snapshot, { ...DEFAULT_MAINTENANCE_PREFERENCES, lastMaintenanceAt: "2026-07-25T12:00:00.000Z" });
     expect(report.ready).toBe(true);
     expect(report.blocked).toBe(0);

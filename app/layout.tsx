@@ -6,6 +6,7 @@ import { DesktopSecurityProvider } from "@/components/providers/desktop-security
 import { DesktopUpdaterProvider } from "@/components/providers/desktop-updater-provider";
 import { DesktopExperienceProvider } from "@/components/providers/desktop-experience-provider";
 import { BackgroundTasksProvider } from "@/components/providers/background-tasks-provider";
+import { BackupAutomationProvider } from "@/components/providers/backup-automation-provider";
 import { DesktopRecoveryGate } from "@/components/providers/desktop-recovery-gate";
 import { AppRouteShell } from "@/components/providers/app-route-shell";
 import { ClientErrorBoundary } from "@/components/providers/client-error-boundary";
@@ -65,9 +66,11 @@ export default function RootLayout({
                 <DesktopProtectionProvider>
                   <DesktopUpdaterProvider>
                     <DesktopExperienceProvider>
-                      <BackgroundTasksProvider>
-                        <AppRouteShell>{children}</AppRouteShell>
-                      </BackgroundTasksProvider>
+                      <BackupAutomationProvider>
+                        <BackgroundTasksProvider>
+                          <AppRouteShell>{children}</AppRouteShell>
+                        </BackgroundTasksProvider>
+                      </BackupAutomationProvider>
                     </DesktopExperienceProvider>
                   </DesktopUpdaterProvider>
                 </DesktopProtectionProvider>

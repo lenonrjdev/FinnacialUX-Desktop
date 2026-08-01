@@ -92,10 +92,10 @@ export function createMaintenanceReport(
     check(
       "version",
       "Versão operacional",
-      snapshot.currentVersion === "1.1.0"
-        ? "A manutenção pós-lançamento está alinhada à versão 1.1.0."
-        : `Versão esperada 1.1.0; encontrada ${snapshot.currentVersion}.`,
-      snapshot.currentVersion === "1.1.0" ? "passed" : "blocked",
+      snapshot.currentVersion === "1.2.0"
+        ? "A manutenção pós-lançamento está alinhada à versão 1.2.0."
+        : `Versão esperada 1.2.0; encontrada ${snapshot.currentVersion}.`,
+      snapshot.currentVersion === "1.2.0" ? "passed" : "blocked",
     ),
     check(
       "schema",

@@ -27172,3 +27172,32 @@ html[data-reduce-motion="true"] .onboarding-dialog {
 .maintenance-artifacts span { display: grid; gap: 3px; }
 .maintenance-artifacts small { color: var(--text-secondary); }
 @media (max-width: 900px) { .maintenance-check-grid, .maintenance-preferences-grid, .maintenance-artifacts { grid-template-columns: 1fr; } .maintenance-score-card { grid-template-columns: auto 1fr; } .maintenance-score-card > svg { display: none; } }
+
+
+/* Fase 21 — backup automático e continuidade operacional */
+.backup-automation-panel { display: grid; gap: 20px; }
+.backup-automation-health { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 20px; border: 1px solid var(--border-color, #e4e7ec); background: var(--surface-card, #fff); }
+.backup-automation-health.protected { border-left: 4px solid #15803d; }
+.backup-automation-health.attention { border-left: 4px solid #b7791f; }
+.backup-automation-health.blocked { border-left: 4px solid #b42318; }
+.backup-automation-health > svg { width: 26px; height: 26px; }
+.backup-automation-score { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-muted, #f2f4f7); font-size: 22px; font-weight: 700; }
+.backup-automation-health strong { display: block; font-size: 17px; }
+.backup-automation-health p { margin: 5px 0 0; color: var(--text-muted, #667085); }
+.backup-automation-status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.backup-automation-status-grid article { min-width: 0; display: flex; gap: 12px; padding: 16px; border: 1px solid var(--border-color, #e4e7ec); background: var(--surface-card, #fff); }
+.backup-automation-status-grid article > svg { flex: 0 0 auto; width: 20px; height: 20px; }
+.backup-automation-status-grid span { min-width: 0; display: grid; gap: 3px; }
+.backup-automation-status-grid small, .backup-automation-history small { color: var(--text-muted, #667085); }
+.backup-automation-status-grid p { margin: 0; color: var(--text-muted, #667085); font-size: 12px; overflow-wrap: anywhere; }
+.backup-automation-preferences-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.backup-automation-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.backup-automation-history { display: grid; gap: 10px; padding: 18px; border: 1px solid var(--border-color, #e4e7ec); background: var(--surface-card, #fff); }
+.backup-automation-history article { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1px solid var(--border-color, #e4e7ec); }
+.backup-automation-history article:first-of-type { border-top: 0; }
+.backup-automation-history article.created > span { color: #15803d; }
+.backup-automation-history article.failed > span { color: #b42318; }
+.backup-automation-history article.skipped > span { color: #b7791f; }
+.backup-automation-history p { margin: 2px 0; color: var(--text-muted, #667085); }
+@media (max-width: 1100px) { .backup-automation-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .backup-automation-status-grid, .backup-automation-preferences-grid { grid-template-columns: 1fr; } .backup-automation-health { grid-template-columns: 56px 1fr; } .backup-automation-health > svg { display: none; } .backup-automation-score { width: 52px; height: 52px; font-size: 18px; } }

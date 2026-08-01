@@ -2,7 +2,7 @@
 
 ## Versões atendidas
 
-A versão estável atual recebe correções de segurança, integridade de dados e regressões bloqueadoras. Durante o ciclo inicial, a série `1.0.x` é o canal suportado.
+A versão estável atual recebe correções de segurança, integridade de dados e regressões bloqueadoras. A série estável `1.x` é o canal suportado. A versão `1.2.0` recebe correções de segurança, integridade de dados e regressões bloqueadoras; a `1.1.0` permanece como base de atualização imediatamente anterior.
 
 ## Antes de solicitar suporte
 

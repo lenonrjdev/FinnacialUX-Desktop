@@ -22,6 +22,7 @@ export const settingsContent = {
     onboarding: "Primeiros passos",
     updates: "Atualizações",
     maintenance: "Manutenção",
+    backupAutomation: "Backup automático",
   },
   summary: {
     account: "Conta principal",

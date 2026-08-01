@@ -13,7 +13,8 @@ export type SettingsView =
   | "accessibility"
   | "onboarding"
   | "updates"
-  | "maintenance";
+  | "maintenance"
+  | "backupAutomation";
 
 export type AppearanceMode = "light" | "dark" | "system";
 export type DateFormat = "dd/MM/yyyy" | "MM/dd/yyyy" | "yyyy-MM-dd";

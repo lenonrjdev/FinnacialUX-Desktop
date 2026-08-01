@@ -1,19 +1,19 @@
 {
   "formatVersion": 1,
   "product": "FinnacialUX Desktop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "channel": "stable",
   "schemaVersion": 14,
   "schemaFrozen": true,
-  "promotedFrom": "1.0.0",
-  "promotedFromTag": "desktop-v1.0.0",
+  "promotedFrom": "1.1.0",
+  "promotedFromTag": "desktop-v1.1.0",
   "target": "windows-x86_64-nsis",
-  "tag": "desktop-v1.1.0",
+  "tag": "desktop-v1.2.0",
   "prerelease": false,
   "makeLatest": true,
   "requiredArtifacts": [
-    "FinnacialUX-Desktop_1.1.0_x64-setup.exe",
-    "FinnacialUX-Desktop_1.1.0_x64-setup.exe.sig",
+    "FinnacialUX-Desktop_1.2.0_x64-setup.exe",
+    "FinnacialUX-Desktop_1.2.0_x64-setup.exe.sig",
     "latest.json",
     "SHA256SUMS.txt",
     "release-manifest.json",
@@ -28,12 +28,16 @@
   "manualMatrix": [
     "windows-10-clean-install",
     "windows-11-clean-install",
-    "upgrade-from-1.0.0",
-    "upgrade-preserves-sqlcipher-data",
-    "stable-updater-signature-validation",
+    "upgrade-from-1.1.0",
+    "sqlcipher-data-preserved",
+    "automatic-backup-due-check",
+    "automatic-backup-deduplication",
+    "automatic-backup-retention",
+    "stronghold-device-encryption",
     "backup-and-restore-smoke-test",
-    "uninstall-keeps-user-data-choice-explicit",
-    "notifications-tray-and-single-instance",
-    "latest-channel-points-to-1.1.0"
-  ]
+    "stable-updater-signature-validation",
+    "latest-channel-points-to-1.2.0"
+  ],
+  "previousReleaseEvidenceRequired": true,
+  "bootstrapWithoutPreviousRelease": false
 }

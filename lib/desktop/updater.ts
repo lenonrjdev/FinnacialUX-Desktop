@@ -95,7 +95,7 @@ function endpointHost(endpoint: string): string {
 export async function getDesktopUpdaterStatus(): Promise<DesktopUpdaterStatus> {
   const config = getConfig();
   return {
-    currentVersion: isDesktopRuntime() ? await getVersion() : "1.1.0",
+    currentVersion: isDesktopRuntime() ? await getVersion() : "1.2.0",
     configured: config.enabled && config.endpoint.startsWith("https://"),
     developmentBuild: isDesktopDevelopmentBuild(),
     channel: "stable",
