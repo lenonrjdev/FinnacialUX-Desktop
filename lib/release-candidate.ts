@@ -1,14 +1,15 @@
-import releaseConfigJson from "@/release/release-candidate.json";
+import stableReleaseJson from "@/release/stable-release.json";
 import type {
   ParsedDesktopVersion,
-  ReleaseCandidateConfig,
-  ReleaseCandidateSnapshot,
-  ReleaseChannel,
+  ReleaseConfig,
   ReleaseReadinessCheck,
   ReleaseReadinessReport,
+  ReleaseSnapshot,
+  ReleaseChannel,
 } from "@/types/release-candidate";
 
-export const releaseCandidateConfig = releaseConfigJson as ReleaseCandidateConfig;
+export const stableReleaseConfig = stableReleaseJson as ReleaseConfig;
+export const releaseCandidateConfig = stableReleaseConfig;
 
 export function parseDesktopVersion(value: string): ParsedDesktopVersion {
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(value.trim());
@@ -48,16 +49,16 @@ function check(
 }
 
 export function createReleaseReadinessReport(
-  snapshot: ReleaseCandidateSnapshot,
-  config: ReleaseCandidateConfig = releaseCandidateConfig,
+  snapshot: ReleaseSnapshot,
+  config: ReleaseConfig = stableReleaseConfig,
 ): ReleaseReadinessReport {
   const channel = releaseChannel(snapshot.version, snapshot.developmentBuild);
   const checks: ReleaseReadinessCheck[] = [
     check(
       "version",
-      "Versão candidata",
+      "Versão estável",
       snapshot.version === config.version
-        ? `${snapshot.version} corresponde ao candidato homologado.`
+        ? `${snapshot.version} corresponde à versão estável publicada.`
         : `Esperado ${config.version}; encontrado ${snapshot.version}.`,
       snapshot.version === config.version ? "passed" : "blocked",
     ),
@@ -65,25 +66,33 @@ export function createReleaseReadinessReport(
       "schema",
       "Schema congelado",
       snapshot.schemaVersion === config.schemaVersion && config.schemaFrozen
-        ? `Schema ${config.schemaVersion} congelado para a versão 1.0.`
+        ? `Schema ${config.schemaVersion} preservado desde a Release Candidate.`
         : `O banco precisa permanecer no schema ${config.schemaVersion}.`,
       snapshot.schemaVersion === config.schemaVersion && config.schemaFrozen ? "passed" : "blocked",
+    ),
+    check(
+      "promotion",
+      "Procedência homologada",
+      config.promotedFrom
+        ? `Promovida a partir de ${config.promotedFrom}, sem alterar o formato dos dados.`
+        : "A versão estável precisa registrar a Release Candidate de origem.",
+      config.promotedFrom ? "passed" : "blocked",
     ),
     check(
       "runtime",
       "Build instalado",
       snapshot.developmentBuild
-        ? "O painel está aberto no modo de desenvolvimento; homologue também o instalador NSIS."
+        ? "O painel está aberto em desenvolvimento; confirme também o instalador estável."
         : "Aplicativo executado a partir de um build instalado.",
       snapshot.developmentBuild ? "attention" : "passed",
       false,
     ),
     check(
       "updater",
-      "Atualizador assinado",
+      "Canal de atualização assinado",
       snapshot.updaterConfigured
-        ? "Chave pública e endpoint HTTPS estão configurados."
-        : "Configure o updater antes de distribuir o candidato.",
+        ? "Chave pública e endpoint HTTPS do canal estável estão configurados."
+        : "Configure o updater antes de distribuir a versão estável.",
       snapshot.updaterConfigured ? "passed" : "blocked",
     ),
     check(
@@ -91,15 +100,15 @@ export function createReleaseReadinessReport(
       "Backup pré-atualização",
       snapshot.backupBeforeInstall
         ? "Cópia criptografada está habilitada antes de instalar atualizações."
-        : "Ative o backup pré-atualização para a homologação.",
+        : "Ative o backup pré-atualização para proteger upgrades futuros.",
       snapshot.backupBeforeInstall ? "passed" : "blocked",
     ),
     check(
       "platform",
-      "Plataforma de homologação",
+      "Plataforma suportada",
       snapshot.windowsRuntime
         ? "Ambiente Windows detectado."
-        : "O instalador candidato deve ser validado no Windows 10 e no Windows 11.",
+        : "O instalador estável é distribuído para Windows 10 e Windows 11 x64.",
       snapshot.windowsRuntime ? "passed" : "attention",
       false,
     ),
@@ -110,6 +119,7 @@ export function createReleaseReadinessReport(
   return {
     channel,
     expectedVersion: config.version,
+    promotedFrom: config.promotedFrom ?? null,
     tag: releaseTag(config.version),
     assetName: releaseAssetName(config.version),
     ready: checks.every((item) => !item.required || item.status === "passed"),
@@ -124,9 +134,10 @@ export function formatReleaseReadinessSummary(report: ReleaseReadinessReport): s
   const lines = [
     `FinnacialUX Desktop ${report.expectedVersion}`,
     `Canal: ${report.channel}`,
+    `Origem: ${report.promotedFrom ?? "não registrada"}`,
     `Tag: ${report.tag}`,
     `Instalador: ${report.assetName}`,
-    `Estado: ${report.ready ? "pronto para homologação" : "pendências encontradas"}`,
+    `Estado: ${report.ready ? "versão estável íntegra" : "pendências encontradas"}`,
     "",
     ...report.checks.map((item) => `[${item.status.toUpperCase()}] ${item.title}: ${item.detail}`),
   ];

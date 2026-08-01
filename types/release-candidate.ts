@@ -1,13 +1,15 @@
 export type ReleaseChannel = "development" | "release-candidate" | "stable";
 export type ReleaseCheckStatus = "passed" | "attention" | "blocked";
 
-export type ReleaseCandidateConfig = {
+export type ReleaseConfig = {
   formatVersion: number;
   product: string;
   version: string;
-  channel: "release-candidate";
+  channel: "release-candidate" | "stable";
   schemaVersion: number;
   schemaFrozen: boolean;
+  promotedFrom?: string;
+  promotedFromTag?: string;
   target: string;
   tag: string;
   prerelease: boolean;
@@ -16,7 +18,7 @@ export type ReleaseCandidateConfig = {
   manualMatrix: string[];
 };
 
-export type ReleaseCandidateSnapshot = {
+export type ReleaseSnapshot = {
   version: string;
   schemaVersion: number | null;
   updaterConfigured: boolean;
@@ -36,6 +38,7 @@ export type ReleaseReadinessCheck = {
 export type ReleaseReadinessReport = {
   channel: ReleaseChannel;
   expectedVersion: string;
+  promotedFrom: string | null;
   tag: string;
   assetName: string;
   ready: boolean;
@@ -52,3 +55,6 @@ export type ParsedDesktopVersion = {
   patch: number;
   prerelease: string | null;
 };
+
+export type ReleaseCandidateConfig = ReleaseConfig;
+export type ReleaseCandidateSnapshot = ReleaseSnapshot;

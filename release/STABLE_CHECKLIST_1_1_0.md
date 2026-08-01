@@ -2,8 +2,9 @@
 
 - [ ] instalação limpa no Windows 10;
 - [ ] instalação limpa no Windows 11;
-- [ ] atualização da versão 1.0.0;
-- [ ] dados SQLCipher preservados;
+- [ ] atualização da versão 1.0.0, somente quando existir uma release 1.0.0 homologada;
+- [ ] quando a 1.0.0 não existir, modo bootstrap registrado como primeiro instalador estável completo;
+- [ ] dados SQLCipher preservados durante reinstalação ou atualização disponível;
 - [ ] assinatura e SHA-256 validados;
 - [ ] backup e restauração testados;
 - [ ] janela de manutenção respeitada;
