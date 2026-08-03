@@ -1,8 +1,8 @@
 {
   "name": "finnacialux-desktop",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
-  "description": "FinnacialUX Desktop — gestão financeira offline-first com backup externo criptografado, SQLCipher e Stronghold.",
+  "description": "FinnacialUX Desktop — gestão financeira offline-first com distribuição Windows assinada, SQLCipher e Stronghold.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -60,6 +60,11 @@
   "overrides": {
     "postcss": "8.5.23",
     "sharp": "0.35.3",
-    "minimatch@3.1.5": "file:vendor/minimatch-v3-secure-compat"
+    "minimatch@3.1.5": "file:vendor/minimatch-v3-secure-compat",
+    "brace-expansion@1": "1.1.18",
+    "brace-expansion@2": "2.1.4",
+    "brace-expansion@3": "3.0.6",
+    "brace-expansion@4": "5.0.9",
+    "brace-expansion@5": "5.0.9"
   }
 }

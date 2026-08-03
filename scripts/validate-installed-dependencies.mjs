@@ -121,11 +121,43 @@ if (installedMinimatch.version !== "10.2.6") {
   );
 }
 
+function parseBraceExpansionVersion(version) {
+  const match = String(version ?? "").trim().match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/u);
+  if (!match) return null;
+  return match.slice(1).map(Number);
+}
+
+function compareBraceExpansionVersions(left, right) {
+  const a = parseBraceExpansionVersion(left);
+  const b = parseBraceExpansionVersion(right);
+  if (!a || !b) return null;
+  for (let index = 0; index < 3; index += 1) {
+    if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+  }
+  return 0;
+}
+
+function isBraceExpansionVersionVulnerable(version) {
+  const parsed = parseBraceExpansionVersion(version);
+  if (!parsed) return true;
+  const [major] = parsed;
+  if (major < 1) return true;
+  if (major === 1) return compareBraceExpansionVersions(version, "1.1.18") < 0;
+  if (major === 2) return compareBraceExpansionVersions(version, "2.1.4") < 0;
+  if (major === 3) return compareBraceExpansionVersions(version, "3.0.6") < 0;
+  if (major === 4) return true;
+  if (major === 5) return compareBraceExpansionVersions(version, "5.0.9") < 0;
+  return false;
+}
+
 for (const [lockKey, entry] of Object.entries(lock.packages ?? {})) {
   if (!entry || typeof entry !== "object") continue;
 
-  if (lockKey.endsWith("node_modules/brace-expansion") && entry.version !== "5.0.8") {
-    failures.push(`brace-expansion vulnerável ou inesperado em ${lockKey}: ${entry.version ?? "sem versão"}`);
+  if (lockKey.endsWith("node_modules/brace-expansion") &&
+      isBraceExpansionVersionVulnerable(entry.version)) {
+    failures.push(
+      `brace-expansion vulneravel ou inesperado em ${lockKey}: ${entry.version ?? "sem versao"}` ,
+    );
   }
 
   if (lockKey.endsWith("node_modules/minimatch") && entry.version === "3.1.5") {
@@ -139,4 +171,4 @@ if (failures.length > 0) {
 
 console.log(`Árvore direta validada: ${Object.keys(directDependencies).length} dependências.`);
 console.log(`Manifesto e lockfile alinhados na versão ${pkg.version}.`);
-console.log("Camada minimatch direta instalada e nenhum brace-expansion anterior a 5.0.8 permaneceu.");
+console.log("Camada minimatch direta instalada e nenhuma linha vulneravel de brace-expansion permaneceu.");
