@@ -19,6 +19,14 @@ async function readJson(filePath) {
   const text = await readFile(filePath, "utf8");
   return JSON.parse(text.replace(/^\uFEFF/, ""));
 }
+function compareVersions(left, right) {
+  const a = String(left).split(".").map((part) => Number(part) || 0);
+  const b = String(right).split(".").map((part) => Number(part) || 0);
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    if ((a[index] ?? 0) !== (b[index] ?? 0)) return (a[index] ?? 0) - (b[index] ?? 0);
+  }
+  return 0;
+}
 function cargoVersion(text) { return text.match(/^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"/m)?.[1] ?? ""; }
 function cargoDependencies(text) {
   const section = text.match(/^\[dependencies\]\s*([\s\S]*?)(?=^\[|\s*$)/m)?.[1] ?? "";
@@ -106,6 +114,15 @@ async function inspectPromotionEvidence(root, directoryArg, suppliedSource, requ
     };
   }
 
+  if (!fromCandidate && compareVersions(source.promotedFrom, "1.5.0") >= 0) {
+    const signingPath = path.join(directory, "WINDOWS_AUTHENTICODE_REPORT.json");
+    const signing = await readJson(signingPath).catch(() => null);
+    if (!signing || signing.status !== "approved" || signing.allValid !== true || signing.timestampComplete !== true || signing.publisherMatch !== true) {
+      if (required) throw new Error("A versão anterior não possui evidência Authenticode válida.");
+      return { available: false, required: false, directory, validationName, sourceVersion: source.promotedFrom, reason: "Evidência Authenticode anterior ausente ou incompatível." };
+    }
+  }
+
   return {
     available: true,
     required,
@@ -135,7 +152,7 @@ async function prepareStableManifest(root, promotionDirectoryArg) {
   const evidence = await inspectPromotionEvidence(root, promotionDirectoryArg, source, evidenceRequired);
   const output = path.join(root, "releases", source.expectedVersion);
   await mkdir(output, { recursive: true });
-  const criticalFiles = ["package.json", "package-lock.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "src-tauri/tauri.conf.json", "release/schema-freeze-14.json", "release/stable-release.json"];
+  const criticalFiles = ["package.json", "package-lock.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "src-tauri/tauri.conf.json", "release/schema-freeze-14.json", "release/stable-release.json", "release/windows-signing-policy.json"];
   const hashes = [];
   for (const relative of criticalFiles) { const filePath = path.join(root, relative); if (await exists(filePath)) hashes.push({ file: relative.replaceAll("\\", "/"), sha256: await sha256File(filePath) }); }
   for (const migration of source.freeze.migrations) hashes.push({ file: `src-tauri/migrations/${migration.file}`, sha256: migration.sha256 });
@@ -179,6 +196,8 @@ async function prepareStableManifest(root, promotionDirectoryArg) {
   const checklistPath = path.join(root, "release", checklistName);
   if (await exists(checklistPath)) await copyFile(checklistPath, path.join(output, "STABLE_CHECKLIST.md"));
   for (const document of ["PRIVACY.md", "SECURITY.md", "SUPPORT.md"]) if (await exists(path.join(root, document))) await copyFile(path.join(root, document), path.join(output, document));
+  const signingPolicy = path.join(root, "release", "windows-signing-policy.json");
+  if (await exists(signingPolicy)) await copyFile(signingPolicy, path.join(output, "WINDOWS_SIGNING_POLICY.json"));
   if (!evidence.available) {
     console.warn(`Versão anterior sem evidência homologada em ${evidence.directory}.`);
     console.warn("A versão atual será preparada como primeiro instalador estável completo, sem declarar upgrade 1.0.0 como validado.");
@@ -210,12 +229,26 @@ async function verifyStableArtifacts(root, releaseDirectoryArg) {
   const latest = await readJson(path.join(directory, "latest.json"));
   const platform = latest.platforms?.["windows-x86_64"];
   if (latest.version !== source.expectedVersion || !platform?.signature || !String(platform.url ?? "").includes(`/desktop-v${source.expectedVersion}/${installerName}`)) throw new Error("latest.json inválido para o canal estável.");
+  if (source.config.windowsAuthenticodeRequired === true) {
+    const auth = await readJson(path.join(directory, "WINDOWS_AUTHENTICODE_REPORT.json"));
+    if (auth.version !== source.expectedVersion || auth.status !== "approved" || auth.allValid !== true || auth.timestampComplete !== true || auth.publisherMatch !== true) {
+      throw new Error("A política Authenticode da release não foi aprovada.");
+    }
+    const installerRecord = auth.artifacts?.find((item) => item.role === "installer");
+    const applicationRecord = auth.artifacts?.find((item) => item.role === "application");
+    if (!installerRecord || installerRecord.sha256 !== installerHash || installerRecord.signatureStatus !== "Valid" || installerRecord.timestampPresent !== true) {
+      throw new Error("A assinatura Authenticode do instalador não corresponde ao artefato atual.");
+    }
+    if (!applicationRecord || applicationRecord.signatureStatus !== "Valid" || applicationRecord.timestampPresent !== true) {
+      throw new Error("A assinatura Authenticode do executável não foi comprovada.");
+    }
+  }
   const validationPath = path.join(directory, "STABLE_VALIDATION_REPORT.json");
   const existing = await readJson(validationPath).catch(() => null);
   if (existing?.manualMatrixComplete === true && existing?.status === "approved-for-stable") {
     if (existing.version !== source.expectedVersion || existing.schemaVersion !== source.expectedSchema || existing.installerSha256 !== installerHash || existing.latestChannelConfirmed !== true) throw new Error("O relatório manual estável não corresponde aos artefatos atuais.");
   } else {
-    const validation = { formatVersion: 2, product: source.config.product, version: source.expectedVersion, schemaVersion: source.expectedSchema, promotedFrom: source.promotedFrom, validatedAt: new Date().toISOString(), installer: installerName, installerSha256: installerHash, updaterSignaturePresent: true, sourceManifestPresent: true, manualMatrixComplete: false, latestChannelConfirmed: false, status: "automatic-checks-passed" };
+    const validation = { formatVersion: 2, product: source.config.product, version: source.expectedVersion, schemaVersion: source.expectedSchema, promotedFrom: source.promotedFrom, validatedAt: new Date().toISOString(), installer: installerName, installerSha256: installerHash, updaterSignaturePresent: true, sourceManifestPresent: true, authenticodeValidated: source.config.windowsAuthenticodeRequired === true, manualMatrixComplete: false, latestChannelConfirmed: false, status: "automatic-checks-passed" };
     await writeFile(validationPath, `${JSON.stringify(validation, null, 2)}\n`, "utf8");
   }
   return directory;
