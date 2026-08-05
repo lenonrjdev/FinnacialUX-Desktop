@@ -1,7 +1,0 @@
-src-tauri/src/command_worker.rs
-src-tauri/src/lib.rs
-src-tauri/src/encrypted_database.rs
-src-tauri/src/protection.rs
-scripts/01_CONFIGURAR_DESKTOP.ps1
-HOTFIX_4_0_4_TAURI_ASYNC_SQLX_SEND.md
-HOTFIX_4_0_4_ARQUIVOS.txt

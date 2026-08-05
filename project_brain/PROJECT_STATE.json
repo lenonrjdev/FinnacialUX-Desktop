@@ -1,0 +1,35 @@
+{
+  "project": {
+    "name": "FinnacialUX Desktop",
+    "version": "1.5.0",
+    "schemaVersion": 14,
+    "status": "active"
+  },
+  "architecture": {
+    "frontend": ["Next.js 16 App Router", "React 19", "TypeScript", "Tailwind CSS 4", "static export"],
+    "desktop": ["Tauri 2", "Rust", "NSIS", "Windows WebView2"],
+    "database": ["SQLite", "SQLCipher", "SQLx", "14 frozen migrations"],
+    "security": ["Stronghold", "Argon2", "Windows keyring", "updater signature", "Windows Authenticode"]
+  },
+  "validation": {
+    "entrypoint": "VALIDAR_PROJETO.cmd",
+    "lastResult": "passed",
+    "lastValidatedAt": "2026-08-05T02:17:19.2490740Z"
+  },
+  "release": {
+    "currentVersion": "1.5.0",
+    "mode": "bootstrap-full-installer",
+    "automaticChecks": "approved",
+    "manualValidation": "pending"
+  },
+  "currentState": {
+    "completedPhase": 24,
+    "knownIssues": [
+      "A homologação manual da release 1.5.0 ainda exige instalação limpa em Windows 10 e Windows 11."
+    ],
+    "nextActions": [
+      "Executar a matriz manual real da release 1.5.0 em Windows 10 e Windows 11.",
+      "Publicar somente depois de todos os gates manuais e automáticos aprovados."
+    ]
+  }
+}

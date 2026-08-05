@@ -200,12 +200,12 @@ async function prepareStableManifest(root, promotionDirectoryArg) {
   if (await exists(signingPolicy)) await copyFile(signingPolicy, path.join(output, "WINDOWS_SIGNING_POLICY.json"));
   if (!evidence.available) {
     console.warn(`Versão anterior sem evidência homologada em ${evidence.directory}.`);
-    console.warn("A versão atual será preparada como primeiro instalador estável completo, sem declarar upgrade 1.0.0 como validado.");
+    console.warn(`A versão atual será preparada como instalador estável completo, sem declarar upgrade ${source.promotedFrom} como validado.`);
   }
   return output;
 }
 
-async function verifyStableArtifacts(root, releaseDirectoryArg) {
+async function verifyStableArtifacts(root, releaseDirectoryArg, { writeValidationReport = true } = {}) {
   const source = await verifySource(root);
   const directory = path.resolve(root, releaseDirectoryArg ?? path.join("releases", source.expectedVersion));
   const installerName = `FinnacialUX-Desktop_${source.expectedVersion}_x64-setup.exe`;
@@ -247,7 +247,7 @@ async function verifyStableArtifacts(root, releaseDirectoryArg) {
   const existing = await readJson(validationPath).catch(() => null);
   if (existing?.manualMatrixComplete === true && existing?.status === "approved-for-stable") {
     if (existing.version !== source.expectedVersion || existing.schemaVersion !== source.expectedSchema || existing.installerSha256 !== installerHash || existing.latestChannelConfirmed !== true) throw new Error("O relatório manual estável não corresponde aos artefatos atuais.");
-  } else {
+  } else if (writeValidationReport) {
     const validation = { formatVersion: 2, product: source.config.product, version: source.expectedVersion, schemaVersion: source.expectedSchema, promotedFrom: source.promotedFrom, validatedAt: new Date().toISOString(), installer: installerName, installerSha256: installerHash, updaterSignaturePresent: true, sourceManifestPresent: true, authenticodeValidated: source.config.windowsAuthenticodeRequired === true, manualMatrixComplete: false, latestChannelConfirmed: false, status: "automatic-checks-passed" };
     await writeFile(validationPath, `${JSON.stringify(validation, null, 2)}\n`, "utf8");
   }
@@ -268,6 +268,7 @@ async function main() {
   }
   if (command === "prepare") { const output = await prepareStableManifest(root, directoryArg); console.log(`Manifestos da release estável preparados em: ${output}`); return; }
   if (command === "verify-artifacts") { const output = await verifyStableArtifacts(root, directoryArg); console.log(`Artefatos da release estável validados em: ${output}`); return; }
+  if (command === "verify-artifacts-readonly") { const output = await verifyStableArtifacts(root, directoryArg, { writeValidationReport: false }); console.log(`Artefatos da release estável validados sem alterações em: ${output}`); return; }
   throw new Error(`Comando desconhecido: ${command}`);
 }
 main().catch((error) => { console.error(`Falha na release estável: ${error instanceof Error ? error.message : String(error)}`); process.exitCode = 1; });

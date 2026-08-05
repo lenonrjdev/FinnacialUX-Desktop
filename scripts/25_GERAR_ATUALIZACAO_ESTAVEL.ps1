@@ -9,13 +9,32 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 $Version = "1.5.0"
 $Notes = ".\release\RELEASE_NOTES_1_5_0.md"
+function Ensure-FinnacialuxLooseApplicationAuthenticode([string]$SigningConfigPath) {
+  . (Join-Path $PSScriptRoot "windows-signing.ps1")
+  $ApplicationPath = Join-Path $Root "src-tauri\target\release\finnacialux-desktop.exe"
+  if (-not (Test-Path $ApplicationPath -PathType Leaf)) { throw "Executavel solto ausente depois do bundle: $ApplicationPath" }
+  $LoadedSigning = Read-FinnacialuxSigningConfig $SigningConfigPath
+  $SigningConfig = $LoadedSigning.Value
+  $Signature = Get-AuthenticodeSignature -FilePath $ApplicationPath
+  $SignerSubject = if ($Signature.SignerCertificate) { [string]$Signature.SignerCertificate.Subject } else { "" }
+  $ExpectedPublisher = [string]$SigningConfig.expectedPublisher
+  $PublisherMatches = -not [string]::IsNullOrWhiteSpace($SignerSubject) -and $SignerSubject.IndexOf($ExpectedPublisher, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+  $NeedsSigning = [string]$Signature.Status -ne "Valid" -or $null -eq $Signature.TimeStamperCertificate -or -not $PublisherMatches
+  if ($NeedsSigning) {
+    Write-Host ""
+    Write-Host "==> Reassinando o executavel solto restaurado pelo bundle NSIS" -ForegroundColor Cyan
+    $Record = Invoke-FinnacialuxSignArtifact $ApplicationPath $SigningConfigPath
+    if ([string]$Record.signatureStatus -ne "Valid" -or $Record.timestampPresent -ne $true -or $Record.publisherMatch -ne $true) { throw "O executavel solto nao passou pela reassinatura pos-bundle." }
+  }
+  Write-Host "Executavel solto Authenticode confirmado apos o bundle." -ForegroundColor Green
+}
 $package = Get-Content ".\package.json" -Raw | ConvertFrom-Json
 if ($package.version -ne $Version) { throw "A versão atual precisa ser $Version." }
 node scripts\stable-release.mjs verify-source $Root
 if ($LASTEXITCODE -ne 0) { throw "A fonte da versão 1.5.0 não passou pela validação de release." }
-node scripts\stable-release.mjs verify-promotion $Root $PreviousReleaseDirectory
-if ($LASTEXITCODE -ne 0) { throw "A versão 1.4.0 não possui evidência de homologação suficiente." }
-if (-not $SkipQuality) { & ".\25_VALIDAR_FASE_24.cmd"; if ($LASTEXITCODE -ne 0) { throw "A validação da Fase 24 falhou." } }
+node scripts\stable-release.mjs inspect-promotion $Root $PreviousReleaseDirectory
+if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel inspecionar a evidencia da versao 1.4.0." }
+if (-not $SkipQuality) { & ".\VALIDAR_PROJETO.cmd" -SkipReleaseArtifacts; if ($LASTEXITCODE -ne 0) { throw "A validação consolidada do projeto falhou." } }
 & ".\scripts\25_VALIDAR_AMBIENTE_ASSINATURA_WINDOWS.ps1" -ConfigPath $SigningConfigPath -RequireReady -Quiet
 node scripts\stable-release.mjs prepare $Root $PreviousReleaseDirectory
 if ($LASTEXITCODE -ne 0) { throw "Não foi possível preparar os manifestos da atualização 1.5.0." }
@@ -60,7 +79,8 @@ else {
     }
     if ($hadOverlay) { Move-Item $backupPath $overlayPath -Force } else { Remove-Item $overlayPath -Force -ErrorAction SilentlyContinue }
   }
-  & ".\scripts\25_VERIFICAR_RELEASE_WINDOWS.ps1" -Version $Version -ConfigPath $SigningConfigPath
+    Ensure-FinnacialuxLooseApplicationAuthenticode -SigningConfigPath $SigningConfigPath
+& ".\scripts\25_VERIFICAR_RELEASE_WINDOWS.ps1" -Version $Version -ConfigPath $SigningConfigPath
   if ($LASTEXITCODE -ne 0) { throw "A verificação Authenticode da atualização 1.5.0 falhou." }
 }
 node scripts\stable-release.mjs prepare $Root $PreviousReleaseDirectory

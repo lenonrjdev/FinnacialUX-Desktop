@@ -6,9 +6,9 @@ on:
     branches: [main]
     paths:
       - "release/**"
-      - "scripts/20_*"
-      - "scripts/21_*"
       - "scripts/stable-release.mjs"
+      - "scripts/windows-signing.mjs"
+      - "scripts/windows-signing.ps1"
       - "scripts/06_PUBLICAR_RELEASE_GITHUB.ps1"
       - "src-tauri/migrations/**"
       - "src-tauri/src/encrypted_database.rs"

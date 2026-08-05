@@ -1,7 +1,0 @@
-scripts/21_GERAR_ATUALIZACAO_ESTAVEL.ps1
-scripts/21_HOMOLOGAR_ATUALIZACAO_ESTAVEL.ps1
-scripts/stable-release.mjs
-release/stable-release.json
-release/STABLE_CHECKLIST_1_1_0.md
-HOTFIX_20_0_1_BOOTSTRAP_RELEASE_1_1_0.md
-HOTFIX_20_0_1_ARQUIVOS.txt

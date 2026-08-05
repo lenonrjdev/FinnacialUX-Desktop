@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "FinnacialUX Desktop",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "identifier": "com.ateliux.finnacialux.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -50,8 +50,8 @@
     ],
     "publisher": "Ateliux",
     "category": "Finance",
-    "shortDescription": "Controle financeiro com redundância externa criptografada.",
-    "longDescription": "FinnacialUX Desktop 1.4 mantém dados em SQLCipher e espelha somente backups criptografados para outro volume ou pasta sincronizada.",
+    "shortDescription": "Controle financeiro com distribuição Windows autenticada.",
+    "longDescription": "FinnacialUX Desktop 1.5 mantém dados em SQLCipher e exige Authenticode com SHA-256 e timestamp para releases oficiais.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

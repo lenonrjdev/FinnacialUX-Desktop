@@ -1,3 +1,0 @@
-components/configuracoes/background-tasks-panel.tsx
-HOTFIX_15_0_1_REACT_COMPILER_NEXT_TICK.md
-HOTFIX_15_0_1_ARQUIVOS.txt

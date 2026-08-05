@@ -1,9 +1,0 @@
-HOTFIX 13.0.1 — ARQUIVOS NOVOS OU MODIFICADOS
-
-MODIFICADOS
-- types/lancamentos.ts
-- tests/unit/reconciliation-engine.test.ts
-
-NOVOS
-- HOTFIX_13_0_1_DESTINATION_ACCOUNT_ID.md
-- HOTFIX_13_0_1_ARQUIVOS.txt

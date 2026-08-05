@@ -137,15 +137,40 @@ function Test-FinnacialuxCodeSigningEku($Certificate) {
 }
 
 function Invoke-FinnacialuxExternalCommand([string]$Command, [string[]]$Arguments, [string]$FailureMessage) {
-  & $Command @Arguments
+  $commandOutput = @(& $Command @Arguments 2>&1)
   $exitCode = $LASTEXITCODE
   if ($null -eq $exitCode) { $exitCode = 0 }
+  foreach ($line in $commandOutput) {
+    Write-Host ([string]$line)
+  }
   if ($exitCode -ne 0) { throw "$FailureMessage (código $exitCode)." }
 }
 
+function Test-FinnacialuxPortableExecutable([string]$ArtifactPath) {
+  $stream = $null
+  $reader = $null
+  try {
+    $stream = [System.IO.File]::Open($ArtifactPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    if ($stream.Length -lt 64) { return $false }
+    $reader = [System.IO.BinaryReader]::new($stream)
+    if ($reader.ReadByte() -ne 0x4D -or $reader.ReadByte() -ne 0x5A) { return $false }
+    $stream.Position = 0x3C
+    $peOffset = $reader.ReadInt32()
+    if ($peOffset -lt 0 -or ($peOffset + 4) -gt $stream.Length) { return $false }
+    $stream.Position = $peOffset
+    return ($reader.ReadByte() -eq 0x50 -and $reader.ReadByte() -eq 0x45 -and $reader.ReadByte() -eq 0x00 -and $reader.ReadByte() -eq 0x00)
+  } catch {
+    return $false
+  } finally {
+    if ($reader) { $reader.Dispose() } elseif ($stream) { $stream.Dispose() }
+  }
+}
 function Invoke-FinnacialuxSignArtifact([string]$ArtifactPath, [string]$ConfigPath = "") {
   $resolvedArtifact = (Resolve-Path $ArtifactPath -ErrorAction Stop).Path
-  if ([System.IO.Path]::GetExtension($resolvedArtifact) -notin @(".exe", ".msi")) { throw "Somente executáveis e instaladores Windows podem ser assinados: $resolvedArtifact" }
+  $extension = [System.IO.Path]::GetExtension($resolvedArtifact).ToLowerInvariant()
+  $isStandardArtifact = $extension -in @(".exe", ".msi", ".dll")
+  $isNsisTemporaryPe = $extension -eq ".tmp" -and [System.IO.Path]::GetFileName($resolvedArtifact) -match "^nst[0-9A-Fa-f]+\.tmp$" -and (Test-FinnacialuxPortableExecutable $resolvedArtifact)
+  if (-not ($isStandardArtifact -or $isNsisTemporaryPe)) { throw "Somente executáveis, instaladores e bibliotecas Windows podem ser assinados. Temporarios NSIS somente sao aceitos quando forem PE validos: $resolvedArtifact" }
   $loaded = Read-FinnacialuxSigningConfig $ConfigPath
   $config = $loaded.Value
   $provider = [string]$config.provider
@@ -186,7 +211,7 @@ function Get-FinnacialuxAuthenticodeRecord([string]$ArtifactPath, $Config) {
   $expected = [string]$Config.expectedPublisher
   $publisherMatch = -not [string]::IsNullOrWhiteSpace($subject) -and $subject.IndexOf($expected, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
   $timestampPresent = $null -ne $signature.TimeStamperCertificate
-  return [ordered]@{
+  return [pscustomobject]([ordered]@{
     fileName = [System.IO.Path]::GetFileName($resolved)
     sha256 = (Get-FileHash $resolved -Algorithm SHA256).Hash.ToLowerInvariant()
     signatureStatus = [string]$signature.Status
@@ -196,5 +221,5 @@ function Get-FinnacialuxAuthenticodeRecord([string]$ArtifactPath, $Config) {
     timestampPresent = $timestampPresent
     timestampSubject = if ($signature.TimeStamperCertificate) { [string]$signature.TimeStamperCertificate.Subject } else { "" }
     publisherMatch = $publisherMatch
-  }
+  })
 }

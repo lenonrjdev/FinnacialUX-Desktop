@@ -1,4 +1,0 @@
-lib/release-candidate.ts
-types/release-candidate.ts
-HOTFIX_20_0_2_CONTRATOS_RELEASE_ESTAVEL.md
-HOTFIX_20_0_2_ARQUIVOS.txt

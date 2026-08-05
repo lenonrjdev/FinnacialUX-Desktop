@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "provider": "certificate-store",
+  "publisherDisplayName": "NOME PUBLICO DO EDITOR",
+  "expectedPublisher": "CN=NOME LEGAL VALIDADO",
+  "timestampUrl": "https://SEU-SERVIDOR-RFC3161",
+  "digestAlgorithm": "SHA256",
+  "timestampDigestAlgorithm": "SHA256",
+  "certificateStore": {
+    "location": "CurrentUser",
+    "name": "My",
+    "thumbprint": "COLE_O_THUMBPRINT_SEM_SEGREDOS"
+  }
+}

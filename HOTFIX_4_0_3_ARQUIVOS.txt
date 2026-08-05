@@ -1,3 +1,0 @@
-HOTFIX_4_0_3_SQLX_CONNECT_OPTIONS.md
-HOTFIX_4_0_3_ARQUIVOS.txt
-src-tauri/src/encrypted_database.rs

@@ -2,11 +2,16 @@ node_modules/
 .next/
 out/
 coverage/
+playwright-report/
+test-results/
 *.log
 .env
-.env.local
+.env.*
+!.env.example
 .cache/
 src-tauri/target/
+.dependency-backup/
+.dependency-staging/
 .DS_Store
 Thumbs.db
 
@@ -26,3 +31,10 @@ coverage/
 # Backups locais dos aplicadores de fases
 .phase-backup/
 *.tsbuildinfo
+release/windows-signing.local.json
+src-tauri/tauri.windows.conf.json
+*.pfx
+*.p12
+*.cer
+*.pvk
+*.snk

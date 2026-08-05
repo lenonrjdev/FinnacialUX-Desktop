@@ -45,3 +45,7 @@ Antes de solicitar suporte sobre restauração, execute Configurações → Test
 ## Backup externo
 
 Em chamados sobre redundância externa, informe apenas o tipo de destino, disponibilidade e resultado do checksum. Não envie a chave do Stronghold, senhas ou conteúdo dos pacotes. Uma cópia no mesmo volume não substitui mídia externa ou pasta sincronizada.
+
+## Conferir a assinatura do instalador
+
+Nas propriedades do arquivo, abra **Assinaturas Digitais** e confirme o publisher esperado. A equipe também pode executar `signtool verify /pa /all /v <arquivo>`. Não instale uma release oficial que apareça sem assinatura ou com assinatura inválida.

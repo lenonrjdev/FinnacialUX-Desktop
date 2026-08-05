@@ -185,7 +185,7 @@ try {
   Write-Host ""
   Write-Host "HOTFIX 8.0.6 CONSOLIDADO COM SUCESSO" -ForegroundColor Green
   Write-Host "A camada minimatch agora resolve sua implementacao segura sem depender do hoisting do npm."
-  Write-Host "Execute agora: .\08_VALIDAR_QUALIDADE.cmd" -ForegroundColor Yellow
+  Write-Host "Execute agora: .\VALIDAR_PROJETO.cmd" -ForegroundColor Yellow
 } catch {
   if ($swapStarted) { Restore-OriginalProject $backupDirectory $originalNodeModules $rootNodeModules }
 

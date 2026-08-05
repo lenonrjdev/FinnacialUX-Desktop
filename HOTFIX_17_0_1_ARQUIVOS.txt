@@ -1,3 +1,0 @@
-components/providers/desktop-experience-provider.tsx
-HOTFIX_17_0_1_COMANDO_ONBOARDING_VOID.md
-HOTFIX_17_0_1_ARQUIVOS.txt

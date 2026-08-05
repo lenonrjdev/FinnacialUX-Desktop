@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "product": "FinnacialUX Desktop",
+  "minimumVersion": "1.5.0",
+  "requiredForStable": true,
+  "fileDigestAlgorithm": "SHA256",
+  "timestampDigestAlgorithm": "SHA256",
+  "timestampRequired": true,
+  "authenticodePolicy": "Default Authentication Verification Policy (/pa)",
+  "requiredArtifacts": [
+    "application-executable",
+    "nsis-installer"
+  ],
+  "acceptedProviders": [
+    "certificate-store",
+    "pfx",
+    "custom-command"
+  ],
+  "secretsPolicy": {
+    "pfxInsideRepository": false,
+    "passwordInsideConfiguration": false,
+    "privateKeyInsideRelease": false,
+    "passwordEnvironmentVariable": "FINNACIALUX_WINDOWS_PFX_PASSWORD"
+  },
+  "renewalWarningDays": 45
+}

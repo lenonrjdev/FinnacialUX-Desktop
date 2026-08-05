@@ -10,9 +10,9 @@ $app = Join-Path $Root "src-tauri\target\release\finnacialux-desktop.exe"
 $installer = Join-Path $releaseDir "FinnacialUX-Desktop_${Version}_x64-setup.exe"
 foreach ($path in @($app, $installer)) { if (-not (Test-Path $path -PathType Leaf)) { throw "Artefato Windows ausente: $path" } }
 $appRecord = Get-FinnacialuxAuthenticodeRecord $app $config
-$appRecord.role = "application"
+$appRecord | Add-Member -MemberType NoteProperty -Name role -Value "application"
 $installerRecord = Get-FinnacialuxAuthenticodeRecord $installer $config
-$installerRecord.role = "installer"
+$installerRecord | Add-Member -MemberType NoteProperty -Name role -Value "installer"
 $artifacts = @($appRecord, $installerRecord)
 $allValid = -not (@($artifacts | Where-Object { $_.signatureStatus -ne "Valid" }).Count)
 $timestampComplete = -not (@($artifacts | Where-Object { $_.timestampPresent -ne $true }).Count)

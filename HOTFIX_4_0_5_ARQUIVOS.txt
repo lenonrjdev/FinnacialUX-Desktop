@@ -1,8 +1,0 @@
-app/layout.tsx
-app/page.tsx
-app/globals.css
-components/providers/client-error-boundary.tsx
-components/providers/desktop-recovery-gate.tsx
-src-tauri/tauri.conf.json
-HOTFIX_4_0_5_TELA_PRETA_INICIALIZACAO.md
-HOTFIX_4_0_5_ARQUIVOS.txt

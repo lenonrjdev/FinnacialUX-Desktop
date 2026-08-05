@@ -30,3 +30,7 @@ Nunca envie para o repositório:
 - arquivos `.fuxbackup`, `.fuxsupport` ou bancos reais;
 - diretório `.release` local;
 - conteúdo do Stronghold.
+
+## Assinatura de código do Windows
+
+Releases estáveis a partir da 1.5.0 exigem Authenticode válido no executável e no instalador, SHA-256 e timestamp. Certificados privados, PFX e senhas não podem entrar no repositório nem na pasta pública da release.
