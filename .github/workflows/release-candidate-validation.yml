@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - "release/**"
-      - "scripts/release-candidate.mjs"
+      - "scripts/release/release-candidate.mjs"
       - "src-tauri/migrations/**"
       - "src-tauri/src/encrypted_database.rs"
       - "src-tauri/src/diagnostics.rs"
@@ -26,7 +26,7 @@ jobs:
           node-version: "22"
       - name: Validar versão e hashes das migrations
         shell: pwsh
-        run: node scripts/release-candidate.mjs verify-source .
+        run: node scripts/release/release-candidate.mjs verify-source .
 
   upgrade-regression:
     name: Atualização dos schemas históricos

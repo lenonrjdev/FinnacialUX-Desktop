@@ -1,16 +1,16 @@
 # Build, release e atualizações
 
-## Fluxos atuais
+## Comandos oficiais
 
-- Configurar: `01_CONFIGURAR_DESKTOP.cmd`.
-- Desenvolver: `02_RODAR_DESKTOP.cmd`.
-- Instalador local: `03_GERAR_INSTALADOR.cmd` ou `03A_GERAR_INSTALADOR_OFFLINE.cmd`.
-- Configurar updater: `04_CONFIGURAR_ATUALIZACOES.cmd`.
-- Gerar/finalizar release genérica: `05_GERAR_RELEASE.cmd` e `05B_FINALIZAR_RELEASE_EXISTENTE.cmd`.
-- Publicar release existente: `06_PUBLICAR_RELEASE_GITHUB.cmd`.
-- Validar projeto: `VALIDAR_PROJETO.cmd`.
-- Assinatura/release estável 1.5.0: comandos `25_CONFIGURAR_ASSINATURA_WINDOWS`, `25_VALIDAR_AMBIENTE_ASSINATURA_WINDOWS`, `25_GERAR_ATUALIZACAO_ESTAVEL`, `25_HOMOLOGAR_ATUALIZACAO_ESTAVEL` e `25_PUBLICAR_ATUALIZACAO_ESTAVEL`.
+- `01_RODAR_PROJETO.cmd`: desenvolvimento diário. Confere Node, npm, Rust, Cargo e Perl, instala o lockfile somente quando `node_modules` está ausente, prepara o cache verificado do libsodium e inicia `npm run desktop:dev`.
+- `02_GERAR_INSTALADOR.cmd`: oferece instalador local, offline ou de release. `-Offline` inclui o WebView2; `-Release` delega ao fluxo assinado. Nenhum modo publica.
+- `03_VALIDAR_E_PREPARAR_ATUALIZACAO.cmd`: executa qualidade e segurança e prepara a release 1.5.0. Aceita `-SomenteValidar`, `-ReutilizarArtefatos`, `-Offline` e `-ForceRebuild`; a execução padrão reutiliza artefatos somente quando eles passam pelos gates.
+- `04_PUBLICAR_ATUALIZACAO.cmd`: publicação externa separada. Exige Git limpo em `main`, artefatos e hashes válidos, Authenticode com publisher/timestamp, assinatura do updater, homologação manual completa e confirmação `PUBLICAR-1.5.0`.
 
-O updater Tauri assina o pacote para que o aplicativo reconheça atualizações legítimas. Authenticode assina PE/MSI para que o Windows reconheça o publisher e o timestamp. Uma assinatura não substitui a outra.
+## Organização interna
 
-A release 1.5.0 está em modo `bootstrap-full-installer` porque a 1.4.0 não possui homologação manual completa. Não declarar upgrade 1.4.0 → 1.5.0 como homologado. Metadados locais ficam em `releases/1.5.0`; binários não são rastreados. Publicação futura exige validação automática, Authenticode e matriz manual real; esta tarefa não publica instaladores.
+`scripts/cli/` implementa os quatro comandos. `core/` contém execução segura e cache nativo; `development/`, `installer/`, `validation/`, `signing/`, `updater/`, `release/` e `publication/` isolam responsabilidades permanentes. Scripts internos não são atalhos públicos.
+
+O updater Tauri assina o pacote para que o aplicativo reconheça atualizações legítimas. Authenticode assina executáveis/instaladores para que o Windows reconheça publisher e timestamp; uma assinatura não substitui a outra. A chave privada do updater e a configuração Authenticode permanecem fora do Git.
+
+A release 1.5.0 está em modo `bootstrap-full-installer` porque a 1.4.0 não possui homologação manual completa. Não declarar upgrade 1.4.0 → 1.5.0 como homologado. Metadados locais ficam em `releases/1.5.0`; binários não são rastreados. Preparar nunca publica, e publicar nunca recompila.

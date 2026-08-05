@@ -1,31 +1,29 @@
 # FinnacialUX Desktop
 
-Aplicativo financeiro local-first para Windows, construído com Next.js, React, TypeScript, Tailwind CSS, Tauri, Rust e SQLCipher. A versão atual é `1.5.0` e o schema do banco está congelado em `14`.
+Aplicativo financeiro local-first para Windows, construído com Next.js 16, React 19, TypeScript, Tailwind CSS 4, Tauri 2, Rust e SQLCipher.
 
-## Instalação e desenvolvimento
+## Requisitos
 
-```powershell
-.\01_CONFIGURAR_DESKTOP.cmd
-.\02_RODAR_DESKTOP.cmd
-```
+Node.js 22.13+, npm 10.9+, Rust MSVC, Cargo e Strawberry Perl.
 
-## Validação
+## Comandos principais
 
 ```powershell
-.\VALIDAR_PROJETO.cmd
+.\01_RODAR_PROJETO.cmd
+.\02_GERAR_INSTALADOR.cmd
+.\03_VALIDAR_E_PREPARAR_ATUALIZACAO.cmd
+.\04_PUBLICAR_ATUALIZACAO.cmd
 ```
 
-## Build e release
+- `01_RODAR_PROJETO.cmd`: prepara o ambiente quando necessário e inicia o Tauri em desenvolvimento.
+- `02_GERAR_INSTALADOR.cmd`: gera instalador local, offline ou de release assinada sem publicar.
+- `03_VALIDAR_E_PREPARAR_ATUALIZACAO.cmd`: valida o projeto e prepara artefatos de atualização; use `-SomenteValidar` para executar apenas a suíte completa.
+- `04_PUBLICAR_ATUALIZACAO.cmd`: publica explicitamente uma release já homologada, após todos os gates e confirmação textual.
 
-```powershell
-.\03_GERAR_INSTALADOR.cmd
-.\05_GERAR_RELEASE.cmd
-```
+## Scripts npm
 
-Os comandos de assinatura Windows e homologação da release atual permanecem no fluxo `25_*`. Chaves privadas, senhas, PFX e configurações locais nunca devem ser versionados.
+Use `npm run desktop:dev`, `npm run desktop:build`, `npm run installer`, `npm run installer:offline`, `npm run validate`, `npm run release:prepare` e `npm run release:publish` em automações controladas.
 
 ## Project Brain
 
-O contexto técnico, estado atual, arquitetura, decisões e regras para agentes de IA estão centralizados em:
-
-`project_brain/README.md`
+O contexto técnico, estado atual, arquitetura, decisões e regras para agentes de IA estão centralizados em `project_brain/README.md`.

@@ -150,7 +150,7 @@ export function UpdatesPanel({
           <WarningIcon />
           <div>
             <strong>Configure a assinatura antes de publicar</strong>
-            <p>Execute <code>.\\04_CONFIGURAR_ATUALIZACOES.cmd</code> na raiz do projeto. A chave privada ficará fora do código e somente a chave pública será incorporada ao aplicativo.</p>
+            <p>Execute <code>.\\03_VALIDAR_E_PREPARAR_ATUALIZACAO.cmd</code> na raiz do projeto. O fluxo configura o updater apenas quando necessário, mantém a chave privada fora do código e incorpora somente a chave pública.</p>
           </div>
         </div>
       ) : null}

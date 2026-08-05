@@ -1,18 +1,21 @@
 # Estrutura de diretórios
 
-- `app/`: rotas do App Router e composição das páginas.
-- `components/`: componentes por domínio, providers, elementos compartilhados e segurança.
-- `content/` e `data/`: conteúdo estático e definições locais usadas pela interface.
-- `lib/`: motores TypeScript, regras de apresentação e adaptadores `lib/desktop/`.
-- `types/`: contratos compartilhados do frontend e da ponte desktop.
-- `tests/`: testes unitários/integração e `tests/e2e/`.
-- `src-tauri/src/`: comandos e motores Rust.
-- `src-tauri/migrations/`: migrations SQL imutáveis do schema 1 ao 14.
-- `src-tauri/capabilities/`: permissões explícitas dos plugins Tauri.
-- `scripts/`: scripts operacionais atuais de configuração, build, release, assinatura e validação.
-- `release/`: configurações e documentos da release atual; configuração local privada é ignorada.
-- `releases/`: artefatos locais gerados e ignorados pelo Git.
-- `.github/workflows/`: qualidade, validação de release e distribuição.
-- `project_brain/`: contexto técnico central.
+- `app/`: rotas do App Router e páginas exportadas estaticamente.
+- `components/`: UI e painéis funcionais.
+- `lib/`: domínio frontend e adaptadores tipados para o desktop.
+- `types/`: contratos TypeScript compartilhados.
+- `src-tauri/`: configuração Tauri, Rust, capabilities, migrations e recursos nativos.
+- `release/`: políticas, freeze de schema, notas e checklists rastreados.
+- `releases/`: artefatos locais ignorados pelo Git; a versão 1.5.0 é preservada.
+- `scripts/cli/`: implementação dos quatro comandos públicos.
+- `scripts/core/`: helper de execução segura e cache verificado do libsodium.
+- `scripts/development/`: preparação do ambiente local.
+- `scripts/installer/`: build NSIS local/offline.
+- `scripts/validation/`: suíte consolidada e servidor estático E2E.
+- `scripts/signing/`: Authenticode, certificado, SignTool, timestamp e relatórios Windows.
+- `scripts/updater/`: configuração segura do updater Tauri.
+- `scripts/release/`: build, finalização, manifestos, validação e homologação.
+- `scripts/publication/`: integração explícita com GitHub Release.
+- `project_brain/`: contexto técnico e operacional ativo.
 
-Diretórios como `node_modules/`, `.next/`, `out/`, `coverage/`, `playwright-report/`, `test-results/` e `src-tauri/target/` são gerados e não fazem parte da arquitetura versionada.
+Diretórios como `node_modules/`, `.next/`, `out/`, `coverage/`, `.cache/` e `src-tauri/target/` são regeneráveis e não fazem parte da arquitetura versionada.

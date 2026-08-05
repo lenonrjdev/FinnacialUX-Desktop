@@ -6,10 +6,10 @@ on:
     branches: [main]
     paths:
       - "release/**"
-      - "scripts/stable-release.mjs"
-      - "scripts/windows-signing.mjs"
-      - "scripts/windows-signing.ps1"
-      - "scripts/06_PUBLICAR_RELEASE_GITHUB.ps1"
+      - "scripts/release/stable-release.mjs"
+      - "scripts/signing/windows-signing.mjs"
+      - "scripts/signing/windows-signing.ps1"
+      - "scripts/publication/publish-github-release.ps1"
       - "src-tauri/migrations/**"
       - "src-tauri/src/encrypted_database.rs"
       - "src-tauri/src/diagnostics.rs"
@@ -34,7 +34,7 @@ jobs:
           node-version: "22"
       - name: Validar versão, promoção e hashes das migrations
         shell: pwsh
-        run: node scripts/stable-release.mjs verify-source .
+        run: node scripts/release/stable-release.mjs verify-source .
 
   upgrade-regression:
     name: Atualização dos schemas históricos

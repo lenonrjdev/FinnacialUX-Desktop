@@ -46,7 +46,7 @@ jobs:
       - name: Preparar manifestos da Release Candidate
         if: env.FINNACIALUX_PRERELEASE == 'true'
         shell: powershell
-        run: node scripts/release-candidate.mjs prepare .
+        run: node scripts/release/release-candidate.mjs prepare .
       - name: Baixar evidências da versão homologada anterior
         if: env.FINNACIALUX_STABLE == 'true'
         shell: powershell
@@ -64,23 +64,23 @@ jobs:
         if: env.FINNACIALUX_STABLE == 'true'
         shell: powershell
         run: |
-          node scripts/stable-release.mjs verify-source .
-          node scripts/stable-release.mjs prepare . $env:FINNACIALUX_PROMOTION_DIR
+          node scripts/release/stable-release.mjs verify-source .
+          node scripts/release/stable-release.mjs prepare . $env:FINNACIALUX_PROMOTION_DIR
       - name: Gerar release assinada
         shell: powershell
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: .\scripts\05_GERAR_RELEASE.ps1 -Ci
+        run: .\scripts\release\build-release.ps1 -Ci
       - name: Validar artefatos da Release Candidate
         if: env.FINNACIALUX_PRERELEASE == 'true'
         shell: powershell
-        run: node scripts/release-candidate.mjs verify-artifacts . "releases\$env:FINNACIALUX_VERSION"
+        run: node scripts/release/release-candidate.mjs verify-artifacts . "releases\$env:FINNACIALUX_VERSION"
       - name: Validar artefatos da release estável
         if: env.FINNACIALUX_STABLE == 'true'
         shell: powershell
-        run: node scripts/stable-release.mjs verify-artifacts . "releases\$env:FINNACIALUX_VERSION"
+        run: node scripts/release/stable-release.mjs verify-artifacts . "releases\$env:FINNACIALUX_VERSION"
       - name: Publicar rascunho para homologação
         uses: softprops/action-gh-release@v3
         with:
